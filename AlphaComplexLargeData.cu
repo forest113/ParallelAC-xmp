@@ -592,9 +592,6 @@ __global__ void markRealTets(unsigned int* tetV1IndexList,
 
 __global__ void initialize() {
 	exactinit();
-	printf("Epsilon: %.17g\n", epsilon);
-	printf("Orient3D: %.17g\n", o3derrboundA);
-	printf("Insphere: %.17g\n", ispwerrbound);
 }
 
 __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
@@ -1054,14 +1051,6 @@ int main(int argc, char** argv) {
 	thrust::device_vector<Atom> d_atoms;
 	thrust::device_vector<unsigned int> d_atomCellIndices;
 
-	size_t free_byte, total_byte;
-	gpuErrchk(cudaMemGetInfo(&free_byte, &total_byte));
-	double free_db = (double) free_byte;
-	double total_db = (double) total_byte;
-	double used_db = total_db - free_db;
-	printf("\nGPU memory usage: used = %f, free = %f MB, total = %f MB\n",
-			used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0,
-			total_db / 1024.0 / 1024.0);
 	if (argc < 6){
                 printf("Usage : parallelac-largeData <crd-file> <out-file> <sol-rad> <alpha> <chunk-size>\n");
 		return 1;
@@ -1083,13 +1072,15 @@ int main(int argc, char** argv) {
 	h_atoms.reserve(numAtoms);
 
 	/* Read the Atoms*/
+        float solventRadius = atof(argv[3]);
+        float alpha = atof(argv[4]);
 	for (int i = 0; i < numAtoms; i++) {
 		fscanf(input, "%f %f %f %f", &x, &y, &z, &radius);
 		Atom atom;
 		atom.x = x;
 		atom.y = y;
 		atom.z = z;
-		atom.radius = radius;
+		atom.radius = radius + solventRadius;
 		atom.index = i + 1;
 		h_atoms.push_back(atom);
 		if (i == 0) {
@@ -1116,21 +1107,16 @@ int main(int argc, char** argv) {
 				maxRadius = radius;
 		}
 	}
-
 	fclose(input);
+        printf("Successfully read the file %s ...\n", argv[1]);
+        printf("The given file has %d atoms. \n\nStarting alpha complex computation for "
+               "alpha = %.3f and solvent radius = %.3f ...\n\n", numAtoms, alpha, solventRadius);
 
-	float alpha = atof(argv[4]);
 	float possibleMaxRadius = sqrtf(maxRadius * maxRadius + alpha);
 	float stepSize = 2 * (possibleMaxRadius);
 	int gridExtentX = (int) ((maxX - minX) / stepSize) + 1;
 	int gridExtentY = (int) ((maxY - minY) / stepSize) + 1;
 	int gridExtentZ = (int) ((maxZ - minZ) / stepSize) + 1;
-	printf("Num atoms: %d\n", numAtoms);
-	printf("Step size: %8.3f\n", stepSize);
-	printf("X: %8d, Y: %8d, Z: %8d\n", gridExtentX, gridExtentY, gridExtentZ);
-	printf("minX: %8.3f, maxX: %8.3f\n", minX, maxX);
-	printf("minY: %8.3f, maxY: %8.3f\n", minY, maxY);
-	printf("minZ: %8.3f, maxZ: %8.3f\n", minZ, maxZ);
 
 	HostTimer memTimer, gridTimer, edgeAlphaTimer, triAlphaTimer;
 	HostTimer tetAlphaTimer, tetOrthoTimer, triOrthoTimer, edgeOrthTimer;
@@ -1151,17 +1137,11 @@ int main(int argc, char** argv) {
 	triOrthoTimer.stop();
 	edgeOrthTimer.start();
 	edgeOrthTimer.stop();
-	printf(
-			"Orig Timer values: \n %.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t\n\n",
-			memTimer.value(), gridTimer.value(), edgeAlphaTimer.value(),
-			triAlphaTimer.value(), tetAlphaTimer.value(), tetOrthoTimer.value(),
-			triOrthoTimer.value(), edgeOrthTimer.value());
 
 	memTimer.start();
 	d_atoms = h_atoms;
 	d_atomCellIndices.resize(numAtoms);
 	memTimer.stop();
-	memTimer.print("initial copy");
 
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
@@ -1170,7 +1150,6 @@ int main(int argc, char** argv) {
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
 
-	printf("Before cell index\n");
 	gridTimer.start();
 	int THREADS = 512;
 	dim3 blocks(numAtoms / THREADS + 1, 1, 1);
@@ -1184,7 +1163,6 @@ int main(int argc, char** argv) {
 			make_int3(gridExtentX, gridExtentY, gridExtentZ), stepSize);
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
-	printf("After cell index\n");
 
 	thrust::device_vector<unsigned int> d_origAtomIndices(numAtoms);
 	thrust::sequence(d_origAtomIndices.begin(), d_origAtomIndices.end(), 1, 1);
@@ -1209,7 +1187,6 @@ int main(int argc, char** argv) {
 
 	d_origAtomIndices.clear();
 	cudaDeviceSynchronize();
-	printf("After cell index 2\n");
 
 	gridTimer.restart();
 	thrust::device_vector<unsigned int> d_indexBegin(
@@ -1232,8 +1209,6 @@ int main(int argc, char** argv) {
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
 
-	printf("After cell index 3\n");
-
 	thrust::host_vector<unsigned int> h_final_tetV1Index;
 	thrust::host_vector<unsigned int> h_final_tetV2Index;
 	thrust::host_vector<unsigned int> h_final_tetV3Index;
@@ -1246,12 +1221,14 @@ int main(int argc, char** argv) {
 	thrust::host_vector<unsigned int> h_final_EdgesV1;
 	thrust::host_vector<unsigned int> h_final_EdgesV2;
 
-	int NUM_CHUNK_ATOMS = atoi(argv[5]);
+        int chunkSuggestion = atoi(argv[5]);
+        int NUM_CHUNK_ATOMS = 512;
+        while (NUM_CHUNK_ATOMS < chunkSuggestion) NUM_CHUNK_ATOMS = 2 * NUM_CHUNK_ATOMS;
 
 	for (int startAtomIndex = 0; startAtomIndex < numAtoms; startAtomIndex +=
 			NUM_CHUNK_ATOMS) {
 
-		printf("Start Iter\n");
+		printf("Processed %d atoms ... \n", startAtomIndex);
 		edgeAlphaTimer.restart();
 		thrust::device_vector<unsigned int> d_possibleEdgeCount(NUM_CHUNK_ATOMS,
 				0u);
@@ -1599,19 +1576,6 @@ int main(int argc, char** argv) {
 				d_trisInTetsListV3.end());
 		cudaDeviceSynchronize();
 
-		// Remove those triangles where all the incident atoms don't lie in current chunk
-		/*d_trisInTetsListV1.erase(
-				thrust::lower_bound(d_trisInTetsListV1.begin(),
-						d_trisInTetsListV1.end(),
-						startAtomIndex + NUM_CHUNK_ATOMS),
-				d_trisInTetsListV1.end());
-		d_trisInTetsListV2.erase(
-				d_trisInTetsListV2.begin() + d_trisInTetsListV1.size(),
-				d_trisInTetsListV2.end());
-		d_trisInTetsListV3.erase(
-				d_trisInTetsListV3.begin() + d_trisInTetsListV1.size(),
-				d_trisInTetsListV3.end());*/
-
 		int trisInTets = d_trisInTetsListV1.size();
 
 		int potentialTris = d_triV1Index.size();
@@ -1774,16 +1738,6 @@ int main(int argc, char** argv) {
 				d_edgesInTrisListV2.end());
 		cudaDeviceSynchronize();
 
-		// Remove those edges where all the incident atoms don't lie in current chunk
-		/*d_edgesInTrisListV1.erase(
-				thrust::lower_bound(d_edgesInTrisListV1.begin(),
-						d_edgesInTrisListV1.end(),
-						startAtomIndex + NUM_CHUNK_ATOMS),
-				d_edgesInTrisListV1.end());
-		d_edgesInTrisListV2.erase(
-				d_edgesInTrisListV2.begin() + d_edgesInTrisListV1.size(),
-				d_edgesInTrisListV2.end());*/
-
 		int edgesInTris = d_edgesInTrisListV1.size();
 
 		int potentialEdges = d_edgeLeftIndex.size();
@@ -1891,39 +1845,6 @@ int main(int argc, char** argv) {
 		int finalEdgeCount = d_finalEdgesV1.size();
 		edgeOrthTimer.stop();
 
-		printf("-------------------- %d --------------------\n",
-				startAtomIndex);
-		printf("\nNum edges (before): %d\n", numEdges);
-		printf("\nNum edges (after) : %lu\n", d_edgeLeftIndex.size());
-		printf("\nNum tris  (before): %d\n", numTris);
-		printf("\nNum tris  (after) : %lu\n", d_triV1Index.size());
-		printf("\nNum tets  (before): %d\n", numTets);
-		printf("\nNum tets  (after) : %d\n", numTetsAfterAlphaFilter);
-		printf("\nNum tets  (final) : %lu\n", d_tetV1Index.size());
-		printf("\nNum tris  (potential) : %d\n", potentialTris);
-		printf("\nNum tris  (in tets) : %d\n", trisInTets);
-		printf("\nNum tris  (potential, not in tets) : %d\n",
-				potentialTrisNotInTets);
-		printf("\nNum tris  (alpha, not in tets) : %d\n", alphaTrisNotInTets);
-		printf("\nNum tris  (total alpha) : %d\n",
-				alphaTrisNotInTets + trisInTets);
-		printf("\nNum edges  (potential) : %d\n", potentialEdges);
-		printf("\nNum edges  (in tris) : %d\n", edgesInTris);
-		printf("\nNum edges  (potential, not in tris) : %d\n",
-				potentialEdgesNotInTris);
-		printf("\nNum edges  (alpha, not in tris) : %d\n", alphaEdgesNotInTris);
-		printf("\nNum edges  (total alpha) : %d\n",
-				alphaEdgesNotInTris + edgesInTris);
-
-		size_t free_byte, total_byte;
-		gpuErrchk(cudaMemGetInfo(&free_byte, &total_byte));
-		double free_db = (double) free_byte;
-		double total_db = (double) total_byte;
-		double used_db = total_db - free_db;
-		printf("\nGPU memory usage: used = %f, free = %f MB, total = %f MB\n",
-				used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0,
-				total_db / 1024.0 / 1024.0);
-
 		d_edgesInTris_beginIndex.clear();
 		d_edgesInTris_endIndex.clear();
 		d_edgeMarkList.clear();
@@ -1988,14 +1909,6 @@ int main(int argc, char** argv) {
 		d_triV2Index.clear();
 		d_triV3Index.clear();
 		cudaDeviceSynchronize();
-
-		gpuErrchk(cudaMemGetInfo(&free_byte, &total_byte));
-		free_db = (double) free_byte;
-		total_db = (double) total_byte;
-		used_db = total_db - free_db;
-		printf("\nGPU memory usage: used = %f, free = %f MB, total = %f MB\n",
-				used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0,
-				total_db / 1024.0 / 1024.0);
 	}
 
 	typedef thrust::host_vector<unsigned int>::iterator UIntDIter;
@@ -2043,16 +1956,40 @@ int main(int argc, char** argv) {
 	h_final_trisV2.erase(thrust::get<1>(endTuple40), h_final_trisV2.end());
 	h_final_trisV3.erase(thrust::get<2>(endTuple40), h_final_trisV3.end());
 
-	printf("\n%ld\t%ld\t%ld\t", h_final_EdgesV1.size(), h_final_trisV1.size(),
-			h_final_tetV1Index.size());
-	//printf("%d\t%d\t%d\t", wrongEdges, wrongTris, wrongTets);
-	printf("0\t0\t0\t");
-	printf("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t\n\n",
-			memTimer.value(), gridTimer.value(), edgeAlphaTimer.value(),
-			triAlphaTimer.value(), tetAlphaTimer.value(), tetOrthoTimer.value(),
-			triOrthoTimer.value(), edgeOrthTimer.value());
+        printf("Alpha complex computed.\n\n");
+	printf("Number of vertices: %15d\n", numAtoms);
+        printf("Number of edges: %18ld\n", h_final_EdgesV1.size());
+        printf("Number of triangles: %14ld\n", h_final_trisV1.size());
+	printf("Number of tetrahedra: %13ld\n", h_final_tetV1Index.size());
+        printf("Total simplices: %18ld\n", (numAtoms + h_final_EdgesV1.size() + h_final_trisV1.size() + h_final_tetV1Index.size()));
 
-	std::cout << "Test completed";
+	printf("\nTime taken (ms):\nData transfer: %20.3f\nGrid computation: %17.3f\nPotential edges: %18.3f\n"
+                        "Potential triangles: %14.3f\nPotential tetrahedra: %13.3f\nAC2 test for tetrahedra: %10.3f\n"
+                        "AC2 test for triangles: %11.3f\nAC2 test for edges: %15.3f\n",
+			memTimer.value() * 1000, gridTimer.value() * 1000, edgeAlphaTimer.value() * 1000,
+			triAlphaTimer.value() * 1000, tetAlphaTimer.value() * 1000, tetOrthoTimer.value() * 1000,
+			triOrthoTimer.value() * 1000, edgeOrthTimer.value() * 1000);
+        printf("Total time taken (ms): %12.3f\n", (memTimer.value() + gridTimer.value() + edgeAlphaTimer.value() + 
+                        triAlphaTimer.value() + tetAlphaTimer.value() + tetOrthoTimer.value() + triOrthoTimer.value() 
+                        + edgeOrthTimer.value()) * 1000);
+
+	printf("\nWriting computed alpha complex to the file %s ...\n", argv[2]);
+
+	FILE *fp = fopen(argv[2], "w");
+        fprintf(fp, "%d %ld %ld %ld\n", numAtoms, h_final_EdgesV1.size(), h_final_trisV1.size(), h_final_tetV1Index.size());
+
+        for (int i = 0; i < numAtoms; i++) {
+            fprintf(fp, "%9.5lf %9.5lf %9.5lf %9.5lf\n", h_atoms[i].x, h_atoms[i].y, h_atoms[i].z, h_atoms[i].radius);
+        }
+        for (int i = 0; i < h_final_EdgesV1.size(); i++) {
+            fprintf(fp, "%9d %9d\n", h_final_EdgesV1[i], h_final_EdgesV2[i]);
+        }
+        for (int i = 0; i < h_final_trisV1.size(); i++) {
+            fprintf(fp, "%9d %9d %9d\n", h_final_trisV1[i], h_final_trisV2[i], h_final_trisV3[i]);
+        }
+        for (int i = 0; i < h_final_tetV1Index.size(); i++) {
+            fprintf(fp, "%9d %9d %9d %9d\n", h_final_tetV1Index[i], h_final_tetV2Index[i], h_final_tetV3Index[i], h_final_tetV4Index[i]);
+        }
 
 	h_atoms.clear();
 	d_atoms.clear();

@@ -32,23 +32,15 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cassert>
 #include <cmath>
-#include <deque>
-#include <fstream>
 #include <iostream>
-#include <set>
-#include <sstream>
 #include <string>
-#include <vector>
 #include <cuda_runtime.h>
 
 using namespace std;
 
 #ifdef _WIN32
 
-#define NOMINMAX
 #include <windows.h>
 
 struct PerfTimer
@@ -168,7 +160,7 @@ public:
 
     double value()
     {
-        return PerfTimer::value() * 1000;
+        return PerfTimer::value();
     }
 
     void print(const string outStr = "")
