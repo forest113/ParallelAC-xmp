@@ -521,7 +521,6 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 	if (tetIndex >= numSpheres)
 		return;
 	float4 sphere = orthoSphereList[tetIndex];
-	float currentDist = sphere.w;
 	unsigned int v1 = tetV1IndexList[tetIndex];
 	unsigned int v2 = tetV2IndexList[tetIndex];
 	unsigned int v3 = tetV3IndexList[tetIndex];
@@ -554,10 +553,6 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 			Atom atom = atomList[atomIndex];
 			pe[0] = atom.x, pe[1] = atom.y, pe[2] = atom.z;
 			we = atom.radius * atom.radius;
-			float powDist = (atom.x - sphere.x) * (atom.x - sphere.x)
-				+ (atom.y - sphere.y) * (atom.y - sphere.y)
-				+ (atom.z - sphere.z) * (atom.z - sphere.z)
-				- (atom.radius * atom.radius);
 			if (orientation < 0) {
 				float result = insphere_w(pa, pb, pc, pd, pe, wa, wb, wc, wd,
 					we);
@@ -620,11 +615,6 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 						Atom atom = atomList[atomIndex];
 						pe[0] = atom.x, pe[1] = atom.y, pe[2] = atom.z;
 						we = atom.radius * atom.radius;
-						float powDist = (atom.x - sphere.x)
-							* (atom.x - sphere.x)
-							+ (atom.y - sphere.y) * (atom.y - sphere.y)
-							+ (atom.z - sphere.z) * (atom.z - sphere.z)
-							- (atom.radius * atom.radius);
 						if (orientation < 0) {
 							float result = insphere_w(pa, pb, pc, pd, pe, wa,
 								wb, wc, wd, we);
@@ -970,19 +960,20 @@ struct TupleCmp {
 	}
 };
 
-thrust::host_vector<Atom> h_atoms;
-thrust::device_vector<Atom> d_atoms;
-thrust::device_vector<unsigned int> d_atomCellIndices;
-unsigned int numAtoms;
-float minX, minY, minZ, maxX, maxY, maxZ;
-float extent;
-float minRadius, maxRadius;
-
 int main(int argc, char** argv) {
-	if (argc < 5)
+	if (argc < 4){
+                printf("Usage : parallelac <crd-file> <out-file> <sol-rad> <alpha>\n");
 		return 1;
+        }
 
-	FILE * input;
+        float minX, minY, minZ, maxX, maxY, maxZ;
+        float minRadius, maxRadius;
+        thrust::host_vector<Atom> h_atoms;
+        thrust::device_vector<Atom> d_atoms;
+        thrust::device_vector<unsigned int> d_atomCellIndices;
+        unsigned int numAtoms;
+	
+        FILE * input;
 	float x, y, z, radius;
 
 	input = fopen(argv[1], "r");
@@ -1029,13 +1020,6 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	float extentX = maxX - minX;
-	float extentY = maxY - minY;
-	float extentZ = maxZ - minZ;
-	extent =
-		(extentX > extentY) ?
-		((extentX > extentZ) ? extentX : extentZ) :
-		((extentY > extentZ) ? extentY : extentZ);
 	fclose(input);
 
 	float alpha = atof(argv[3]);
@@ -1353,7 +1337,7 @@ int main(int argc, char** argv) {
 
 	tetOrthoTimer.start();
 	int numTetsAfterAlphaFilter = d_tetMarkList.size();
-	THREADS = atoi(argv[4]);
+	//THREADS = atoi(argv[4]);
 	threads = dim3(THREADS, 1, 1);
 	blocks = dim3(d_orthoSphereList.size() / THREADS + 1, 1, 1);
 	checkTetsOrthosphere <<<blocks, threads >>>(d_tetV1Index_ptr,
@@ -1385,7 +1369,7 @@ int main(int argc, char** argv) {
 	gpuErrchk(cudaDeviceSynchronize());
 
 
-	THREADS = 512;
+	//THREADS = 512;
 	threads = dim3(THREADS, 1, 1);
 	int finalTetCount = d_tetMarkList.size();
 	thrust::device_vector<unsigned int> d_trisInTetsListV1(finalTetCount * 4);
@@ -1752,7 +1736,7 @@ int main(int argc, char** argv) {
 		alphaEdgesNotInTris + edgesInTris);
 
 
-	printf("\n%d\t%d\t%d\t", alphaEdgesNotInTris + edgesInTris, alphaTrisNotInTets + trisInTets, h_tetV1Index.size());
+	printf("\n%d\t%d\t%ld\t", alphaEdgesNotInTris + edgesInTris, alphaTrisNotInTets + trisInTets, h_tetV1Index.size());
 	//printf("%d\t%d\t%d\t", wrongEdges, wrongTris, wrongTets);
 	printf("0\t0\t0\t");
 	printf("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t\n\n", memTimer.value(), gridTimer.value(), edgeAlphaTimer.value(),

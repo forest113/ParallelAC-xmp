@@ -607,7 +607,6 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 	if (tetIndex >= numSpheres)
 		return;
 	float4 sphere = orthoSphereList[tetIndex];
-	float currentDist = sphere.w;
 	unsigned int v1 = tetV1IndexList[tetIndex];
 	unsigned int v2 = tetV2IndexList[tetIndex];
 	unsigned int v3 = tetV3IndexList[tetIndex];
@@ -640,10 +639,6 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 			Atom atom = atomList[atomIndex];
 			pe[0] = atom.x, pe[1] = atom.y, pe[2] = atom.z;
 			we = atom.radius * atom.radius;
-			float powDist = (atom.x - sphere.x) * (atom.x - sphere.x)
-					+ (atom.y - sphere.y) * (atom.y - sphere.y)
-					+ (atom.z - sphere.z) * (atom.z - sphere.z)
-					- (atom.radius * atom.radius);
 			if (orientation < 0) {
 				float result = insphere_w(pa, pb, pc, pd, pe, wa, wb, wc, wd,
 						we);
@@ -703,11 +698,6 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 						Atom atom = atomList[atomIndex];
 						pe[0] = atom.x, pe[1] = atom.y, pe[2] = atom.z;
 						we = atom.radius * atom.radius;
-						float powDist = (atom.x - sphere.x)
-								* (atom.x - sphere.x)
-								+ (atom.y - sphere.y) * (atom.y - sphere.y)
-								+ (atom.z - sphere.z) * (atom.z - sphere.z)
-								- (atom.radius * atom.radius);
 						if (orientation < 0) {
 							float result = insphere_w(pa, pb, pc, pd, pe, wa,
 									wb, wc, wd, we);
@@ -1059,11 +1049,6 @@ struct TupleCmp {
 	}
 };
 
-unsigned int numAtoms;
-float minX, minY, minZ, maxX, maxY, maxZ;
-float extent;
-float minRadius, maxRadius;
-
 int main(int argc, char** argv) {
 	thrust::host_vector<Atom> h_atoms;
 	thrust::device_vector<Atom> d_atoms;
@@ -1077,8 +1062,14 @@ int main(int argc, char** argv) {
 	printf("\nGPU memory usage: used = %f, free = %f MB, total = %f MB\n",
 			used_db / 1024.0 / 1024.0, free_db / 1024.0 / 1024.0,
 			total_db / 1024.0 / 1024.0);
-	if (argc < 5)
+	if (argc < 6){
+                printf("Usage : parallelac-largeData <crd-file> <out-file> <sol-rad> <alpha> <chunk-size>\n");
 		return 1;
+        }
+
+        unsigned int numAtoms;
+        float minX, minY, minZ, maxX, maxY, maxZ;
+        float minRadius, maxRadius;
 
 	FILE * input;
 	float x, y, z, radius;
@@ -1087,11 +1078,6 @@ int main(int argc, char** argv) {
 
 	/* Read the no. of atoms */
 	fscanf(input, "%d", &numAtoms);
-
-	int maxAtoms = atoi(argv[5]);
-	if (numAtoms > maxAtoms){
-		numAtoms = maxAtoms;
-	}
 
 	/* allocate required data */
 	h_atoms.reserve(numAtoms);
@@ -1131,16 +1117,9 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	float extentX = maxX - minX;
-	float extentY = maxY - minY;
-	float extentZ = maxZ - minZ;
-	extent =
-			(extentX > extentY) ?
-					((extentX > extentZ) ? extentX : extentZ) :
-					((extentY > extentZ) ? extentY : extentZ);
 	fclose(input);
 
-	float alpha = atof(argv[3]);
+	float alpha = atof(argv[4]);
 	float possibleMaxRadius = sqrtf(maxRadius * maxRadius + alpha);
 	float stepSize = 2 * (possibleMaxRadius);
 	int gridExtentX = (int) ((maxX - minX) / stepSize) + 1;
@@ -1267,7 +1246,7 @@ int main(int argc, char** argv) {
 	thrust::host_vector<unsigned int> h_final_EdgesV1;
 	thrust::host_vector<unsigned int> h_final_EdgesV2;
 
-	int NUM_CHUNK_ATOMS = atoi(argv[4]);
+	int NUM_CHUNK_ATOMS = atoi(argv[5]);
 
 	for (int startAtomIndex = 0; startAtomIndex < numAtoms; startAtomIndex +=
 			NUM_CHUNK_ATOMS) {
@@ -1528,7 +1507,7 @@ int main(int argc, char** argv) {
 		tetOrthoTimer.restart();
 		int numTetsAfterAlphaFilter = d_tetMarkList.size();
 		blocks = dim3(d_orthoSphereList.size() / THREADS + 1, 1, 1);
-		checkTetsOrthosphereOld<<<blocks, threads>>>(d_tetV1Index_ptr,
+		checkTetsOrthosphere<<<blocks, threads>>>(d_tetV1Index_ptr,
 				d_tetV2Index_ptr, d_tetV3Index_ptr, d_tetV4Index_ptr,
 				d_atomList_ptr, make_float3(minX, minY, minZ), d_indexBegin_ptr,
 				d_indexEnd_ptr, stepSize,
@@ -2064,7 +2043,7 @@ int main(int argc, char** argv) {
 	h_final_trisV2.erase(thrust::get<1>(endTuple40), h_final_trisV2.end());
 	h_final_trisV3.erase(thrust::get<2>(endTuple40), h_final_trisV3.end());
 
-	printf("\n%d\t%d\t%d\t", h_final_EdgesV1.size(), h_final_trisV1.size(),
+	printf("\n%ld\t%ld\t%ld\t", h_final_EdgesV1.size(), h_final_trisV1.size(),
 			h_final_tetV1Index.size());
 	//printf("%d\t%d\t%d\t", wrongEdges, wrongTris, wrongTets);
 	printf("0\t0\t0\t");
