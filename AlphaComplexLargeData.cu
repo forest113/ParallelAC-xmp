@@ -1911,50 +1911,82 @@ int main(int argc, char** argv) {
 		cudaDeviceSynchronize();
 	}
 
-	typedef thrust::host_vector<unsigned int>::iterator UIntDIter;
+        memTimer.restart();
+        thrust::device_vector<unsigned int> d_final_trisV1;
+	thrust::device_vector<unsigned int> d_final_trisV2;
+	thrust::device_vector<unsigned int> d_final_trisV3;
 
-	thrust::sort_by_key(h_final_EdgesV2.begin(), h_final_EdgesV2.end(),
-			h_final_EdgesV1.begin());
-	thrust::sort_by_key(h_final_EdgesV1.begin(), h_final_EdgesV1.end(),
-			h_final_EdgesV2.begin());
+        d_final_trisV1 = h_final_trisV1;
+        d_final_trisV2 = h_final_trisV2;
+        d_final_trisV3 = h_final_trisV3;
+
+	thrust::device_vector<unsigned int> d_final_EdgesV1;
+	thrust::device_vector<unsigned int> d_final_EdgesV2;
+        
+        d_final_EdgesV1 = h_final_EdgesV1;
+        d_final_EdgesV2 = h_final_EdgesV2;
+        cudaDeviceSynchronize();
+        memTimer.stop();
+
+        edgeOrthTimer.restart();
+	typedef thrust::device_vector<unsigned int>::iterator UIntDIter;
+
+	thrust::sort_by_key(d_final_EdgesV2.begin(), d_final_EdgesV2.end(),
+			d_final_EdgesV1.begin());
+	thrust::sort_by_key(d_final_EdgesV1.begin(), d_final_EdgesV1.end(),
+			d_final_EdgesV2.begin());
 	typedef thrust::tuple<UIntDIter, UIntDIter> UInt2DIterTuple;
 	typedef thrust::zip_iterator<UInt2DIterTuple> ZipU2DIter;
 	ZipU2DIter newEnd60 = thrust::unique(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_EdgesV1.begin(),
-							h_final_EdgesV2.begin())),
+					thrust::make_tuple(d_final_EdgesV1.begin(),
+							d_final_EdgesV2.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_EdgesV1.end(),
-							h_final_EdgesV2.end())));
+					thrust::make_tuple(d_final_EdgesV1.end(),
+							d_final_EdgesV2.end())));
 	UInt2DIterTuple endTuple60 = newEnd60.get_iterator_tuple();
-	h_final_EdgesV1.erase(thrust::get<0>(endTuple60), h_final_EdgesV1.end());
-	h_final_EdgesV2.erase(thrust::get<1>(endTuple60), h_final_EdgesV2.end());
+	d_final_EdgesV1.erase(thrust::get<0>(endTuple60), d_final_EdgesV1.end());
+	d_final_EdgesV2.erase(thrust::get<1>(endTuple60), d_final_EdgesV2.end());
+        cudaDeviceSynchronize();
+        edgeOrthTimer.stop();
 
-	thrust::sort_by_key(h_final_trisV3.begin(), h_final_trisV3.end(),
+        triOrthoTimer.restart();
+	thrust::sort_by_key(d_final_trisV3.begin(), d_final_trisV3.end(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_trisV1.begin(),
-							h_final_trisV2.begin())));
-	thrust::sort_by_key(h_final_trisV2.begin(), h_final_trisV2.end(),
+					thrust::make_tuple(d_final_trisV1.begin(),
+							d_final_trisV2.begin())));
+	thrust::sort_by_key(d_final_trisV2.begin(), d_final_trisV2.end(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_trisV1.begin(),
-							h_final_trisV3.begin())));
-	thrust::sort_by_key(h_final_trisV1.begin(), h_final_trisV1.end(),
+					thrust::make_tuple(d_final_trisV1.begin(),
+							d_final_trisV3.begin())));
+	thrust::sort_by_key(d_final_trisV1.begin(), d_final_trisV1.end(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_trisV2.begin(),
-							h_final_trisV3.begin())));
+					thrust::make_tuple(d_final_trisV2.begin(),
+							d_final_trisV3.begin())));
 	typedef thrust::tuple<UIntDIter, UIntDIter, UIntDIter> UInt3DIterTuple;
 	typedef thrust::zip_iterator<UInt3DIterTuple> ZipU3DIter;
 	ZipU3DIter newEnd40 = thrust::unique(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_trisV1.begin(),
-							h_final_trisV2.begin(), h_final_trisV3.begin())),
+					thrust::make_tuple(d_final_trisV1.begin(),
+							d_final_trisV2.begin(), d_final_trisV3.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(h_final_trisV1.end(),
-							h_final_trisV2.end(), h_final_trisV3.end())));
+					thrust::make_tuple(d_final_trisV1.end(),
+							d_final_trisV2.end(), d_final_trisV3.end())));
 	UInt3DIterTuple endTuple40 = newEnd40.get_iterator_tuple();
-	h_final_trisV1.erase(thrust::get<0>(endTuple40), h_final_trisV1.end());
-	h_final_trisV2.erase(thrust::get<1>(endTuple40), h_final_trisV2.end());
-	h_final_trisV3.erase(thrust::get<2>(endTuple40), h_final_trisV3.end());
+	d_final_trisV1.erase(thrust::get<0>(endTuple40), d_final_trisV1.end());
+	d_final_trisV2.erase(thrust::get<1>(endTuple40), d_final_trisV2.end());
+	d_final_trisV3.erase(thrust::get<2>(endTuple40), d_final_trisV3.end());
+        cudaDeviceSynchronize();
+        triOrthoTimer.stop();
+
+        memTimer.restart();
+        h_final_trisV1 = d_final_trisV1;
+        h_final_trisV2 = d_final_trisV2;
+        h_final_trisV3 = d_final_trisV3;
+        h_final_EdgesV1 = d_final_EdgesV1;
+        h_final_EdgesV2 = d_final_EdgesV2;
+        cudaDeviceSynchronize();
+        memTimer.stop();
 
         printf("Alpha complex computed.\n\n");
 	printf("Number of vertices: %15d\n", numAtoms);
@@ -1995,6 +2027,11 @@ int main(int argc, char** argv) {
 	d_atoms.clear();
 	d_atomCellIndices.clear();
 	d_origAtomIndices.clear();
+        d_final_trisV1.clear();
+        d_final_trisV2.clear();
+        d_final_trisV3.clear();
+        d_final_EdgesV1.clear();
+        d_final_EdgesV2.clear();
 
 	h_final_EdgesV1.clear();
 	h_final_EdgesV2.clear();

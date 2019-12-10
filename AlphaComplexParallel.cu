@@ -1722,5 +1722,29 @@ int main(int argc, char** argv) {
             fprintf(fp, "%9d %9d %9d %9d\n", h_tetV1Index[i], h_tetV2Index[i], h_tetV3Index[i], h_tetV4Index[i]);
         }
 
+        h_atoms.clear();
+	d_atoms.clear();
+	d_atomCellIndices.clear();
+	d_origAtomIndices.clear();
+        d_finaltrisV1.clear();
+        d_finaltrisV2.clear();
+        d_finaltrisV3.clear();
+        d_finalEdgesV1.clear();
+        d_finalEdgesV2.clear();
+        d_tetV1Index.clear();
+	d_tetV2Index.clear();
+	d_tetV3Index.clear();
+	d_tetV4Index.clear();
+
+	h_finalEdgesV1.clear();
+	h_finalEdgesV2.clear();
+	h_finaltrisV1.clear();
+	h_finaltrisV2.clear();
+	h_finaltrisV3.clear();
+	h_tetV1Index.clear();
+	h_tetV2Index.clear();
+	h_tetV3Index.clear();
+	h_tetV4Index.clear();
+
 	return 0;
 }

@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 2.8)
 find_package(CUDA)
 
 # nvcc flags                                                                                                                                                                                               
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
+# set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 
 cuda_compile(PARALLEL_AC_O AlphaComplexParallel.cu)
 cuda_add_executable(parallelac ${PARALLEL_AC_O})
