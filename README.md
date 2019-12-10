@@ -41,13 +41,13 @@ Where:
 
 ## Test Data
 
-Some example CRD files are provided in the folder called **data**. It contains atomic representations of a few proteins obtained from [Protein Database](https://www.rcsb.org/). An example of small protein protein is 1GRM provided as the file `1grm.crd`. A typical medium sized protein contains a few thousand atoms, the file `1k4c.crd` is such an example. Lastly, `1x9p.crd` is an example of fairly large protein complex containing more than 100,000 atoms. We would recommend using **parallelac-largeData** for such inputs.
+Some example CRD files are provided in the folder called **data**. It contains atomic representations of a few proteins obtained from [Protein Database](https://www.rcsb.org/). An example of a small protein is 1GRM which is provided as the file named `1grm.crd`. A typical medium sized protein contains a few thousand atoms, the file `1k4c.crd` is such an example. Lastly, `1x9p.crd` is an example of fairly large protein complex containing more than 100,000 atoms. We would recommend using **parallelac-largeData** for such inputs.
 
 ---
 
 ## Acknowledgement
 
-We would like to thank Prof. Sathish Vadhiyar and Nikhil Ranjanikar for helpful discussions and suggestions during early phase of this work.
+We would like to thank Prof. Sathish Vadhiyar and Nikhil Ranjanikar for helpful discussions and suggestions during the early phase of this work.
 
 ---
 
