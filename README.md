@@ -11,20 +11,22 @@ $ cmake ..
 $ make
 ```
 
-The commands above should generate two executables called **parallelac** and **parallelac-largeData**. 
+The commands above should generate two executables called **parallelac** and **parallelac-largeData**.
 
-We have tested this on a system running Ubuntu 18.10 with CUDA 10.1 having nVidia GeForce GTX 1080 graphics card.
+We have tested this code on a system running Ubuntu 18.10 with CUDA 10.1 having Nvidia GeForce GTX 1080 graphics card.
 
 ---
 
 ## Execute
 
 The executables generated can be used to compute weighted alpha complexes for set of balls given in CRD format. The command to execute is:
+
 ```bash
 $ parallelac <crd-file> <out-file> <sol-rad> <alpha>
 ```
 
-On modern GPUs, computation of the alpha complex for files containing 100,000 balls should be possible using the command above. However, for larger inputs like huge protein complexes containing a few million atoms, the GPU memory may not be sufficient to process the whole complex in one go. In such cases, we break up the input into smaller chunks. Use the following command to process larger inputs:
+On modern GPUs, computation of the alpha complex for input containing up to 100,000 balls should be possible using the command above. However, for larger inputs like huge protein complexes containing a few million atoms, the GPU memory may not be sufficient to process the whole complex in one go. In such cases, we break up the input into smaller chunks. Use the following command to process larger inputs:
+
 ```bash
 $ parallelac-largeData <crd-file> <out-file> <sol-rad> <alpha> <chunk-size>
 ```
@@ -35,13 +37,13 @@ Where:
  2. `<out-file>` is the output alpha complex.
  3. `<sol-rad>` is the solvent radius which can be added to the atom radii before computation of the alpha complex.
  4. `<alpha>` is the alpha value.
- 5. `<chunk-size>` a suggestion for the number of balls to be processed simulateneously on the GPU. A good suggestion for this parameter is 100,000.
+ 5. `<chunk-size>` a suggestion for the number of balls to be processed simulateneously on the GPU. A good suggestion for this parameter is 100000.
 
 ---
 
 ## Test Data
 
-Some example CRD files are provided in the folder called **data**. It contains atomic representations of a few proteins obtained from [Protein Database](https://www.rcsb.org/). An example of a small protein is 1GRM which is provided as the file named `1grm.crd`. A typical medium sized protein contains a few thousand atoms, the file `1k4c.crd` is such an example. Lastly, `1x9p.crd` is an example of fairly large protein complex containing more than 100,000 atoms. We would recommend using **parallelac-largeData** for such inputs.
+Some example CRD files are provided in the folder called **data**. It contains atomic representations of a few proteins obtained from [Protein Database](https://www.rcsb.org/). An example of a small protein is 1GRM which is provided as the file named `1grm.crd`. A typical medium sized protein contains a few thousand atoms, the file `1k4c.crd` is such an example. Lastly, `1x9p.crd` is an example of a fairly large protein complex containing more than 100,000 atoms. We would recommend using **parallelac-largeData** for such inputs.
 
 ---
 

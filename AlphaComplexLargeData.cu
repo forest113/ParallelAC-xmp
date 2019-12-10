@@ -62,7 +62,7 @@ typedef struct At {
 	unsigned int index;
 } Atom;
 
-__global__ void computeCellIndex(Atom* atomList, unsigned int* indexList,
+__global__ void computeCellIndex(Atom *atomList, unsigned int *indexList,
 		unsigned int numAtoms, float3 min, float3 max, int3 gridSize,
 		float stepSize) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -77,9 +77,9 @@ __global__ void computeCellIndex(Atom* atomList, unsigned int* indexList,
 	indexList[i] = cellIndex;
 }
 
-__global__ void computePossibleEdgeCount(unsigned int* beginList,
-		unsigned int* endList, unsigned int * cellIndexList,
-		unsigned int numAtoms, unsigned int* edgeCount, int3 gridSize,
+__global__ void computePossibleEdgeCount(unsigned int *beginList,
+		unsigned int *endList, unsigned int *cellIndexList,
+		unsigned int numAtoms, unsigned int *edgeCount, int3 gridSize,
 		int startAtomIndex, int chunkAtomCount) {
 	int atomIndex = startAtomIndex + blockIdx.x * blockDim.x + threadIdx.x;
 	if (atomIndex >= numAtoms)
@@ -118,10 +118,10 @@ __global__ void computePossibleEdgeCount(unsigned int* beginList,
 	edgeCount[atomIndex - startAtomIndex] = totalEdgeCount;
 }
 
-__global__ void fillPotentialEdges(unsigned int* beginList,
-		unsigned int* endList, unsigned int * cellIndexList,
-		unsigned int numAtoms, unsigned int* edgeAddressList,
-		unsigned int* edgeLeftList, unsigned int * edgeRightList, int3 gridSize,
+__global__ void fillPotentialEdges(unsigned int *beginList,
+		unsigned int *endList, unsigned int *cellIndexList,
+		unsigned int numAtoms, unsigned int *edgeAddressList,
+		unsigned int *edgeLeftList, unsigned int *edgeRightList, int3 gridSize,
 		int startAtomIndex, int chunkAtomCount) {
 	int atomIndex = startAtomIndex + blockIdx.x * blockDim.x + threadIdx.x;
 	if (atomIndex >= numAtoms)
@@ -164,8 +164,8 @@ __global__ void fillPotentialEdges(unsigned int* beginList,
 	}
 }
 
-__global__ void markRealEdges(unsigned int* edgeLeftList,
-		unsigned int * edgeRightList, bool * edgeMarkList, Atom* atomList,
+__global__ void markRealEdges(unsigned int *edgeLeftList,
+		unsigned int *edgeRightList, bool *edgeMarkList, Atom *atomList,
 		int numAtoms, int numEdges, float alpha) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numEdges)
@@ -189,9 +189,9 @@ __global__ void markRealEdges(unsigned int* edgeLeftList,
 	}
 }
 
-__global__ void computePossibleTriangleCount(unsigned int* edgeLeftIndexList,
-		unsigned int* edgeRightIndexList, unsigned int* beginIndexList,
-		unsigned int* endIndexList, unsigned int* triCountList, int numAtoms,
+__global__ void computePossibleTriangleCount(unsigned int *edgeLeftIndexList,
+		unsigned int *edgeRightIndexList, unsigned int *beginIndexList,
+		unsigned int *endIndexList, unsigned int *triCountList, int numAtoms,
 		int startAtomIndex, int chunkAtomCount) {
 	int atomIndex = startAtomIndex + blockIdx.x * blockDim.x + threadIdx.x;
 	if (atomIndex >= numAtoms)
@@ -237,11 +237,11 @@ __global__ void computePossibleTriangleCount(unsigned int* edgeLeftIndexList,
 	triCountList[atomIndex - startAtomIndex] = triCount;
 }
 
-__global__ void fillPossibleTriangles(unsigned int* edgeLeftIndexList,
-		unsigned int* edgeRightIndexList, unsigned int* beginIndexList,
-		unsigned int* endIndexList, int numAtoms, unsigned int* triV1IndexList,
-		unsigned int* triV2IndexList, unsigned int* triV3IndexList,
-		unsigned int* startAddressList, int startAtomIndex,
+__global__ void fillPossibleTriangles(unsigned int *edgeLeftIndexList,
+		unsigned int *edgeRightIndexList, unsigned int *beginIndexList,
+		unsigned int *endIndexList, int numAtoms, unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
+		unsigned int *startAddressList, int startAtomIndex,
 		int chunkAtomCount) {
 	int atomIndex = startAtomIndex + blockIdx.x * blockDim.x + threadIdx.x;
 	if (atomIndex >= numAtoms)
@@ -295,9 +295,9 @@ __global__ void fillPossibleTriangles(unsigned int* edgeLeftIndexList,
 	}
 }
 
-__global__ void markRealTriangles1(unsigned int* triV1IndexList,
-		unsigned int * triV2IndexList, unsigned int * triV3IndexList,
-		bool * triMarkList, float4 * orthoSphereList, Atom* atomList,
+__global__ void markRealTriangles1(unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
+		bool *triMarkList, float4 *orthoSphereList, Atom *atomList,
 		int numAtoms, int numTris, float alpha) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numTris)
@@ -347,10 +347,10 @@ __global__ void markRealTriangles1(unsigned int* triV1IndexList,
 	triMarkList[i] = (dist <= (alpha + ATHRES));
 }
 
-__global__ void computePossibleTetCount(unsigned int* triV1IndexList,
-		unsigned int* triV2IndexList, unsigned int* triV3IndexList,
-		unsigned int* beginIndexList, unsigned int* endIndexList,
-		unsigned int* tetCountList, int numAtoms, int startAtomIndex,
+__global__ void computePossibleTetCount(unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
+		unsigned int *beginIndexList, unsigned int *endIndexList,
+		unsigned int *tetCountList, int numAtoms, int startAtomIndex,
 		int chunkAtomCount) {
 	int atomIndex = startAtomIndex + blockIdx.x * blockDim.x + threadIdx.x;
 	if (atomIndex >= numAtoms)
@@ -431,12 +431,12 @@ __global__ void computePossibleTetCount(unsigned int* triV1IndexList,
 	tetCountList[atomIndex - startAtomIndex] = tetCount;
 }
 
-__global__ void fillPossibleTets(unsigned int* triV1IndexList,
-		unsigned int* triV2IndexList, unsigned int* triV3IndexList,
-		unsigned int* beginIndexList, unsigned int* endIndexList, int numAtoms,
-		unsigned int* tetV1IndexList, unsigned int* tetV2IndexList,
-		unsigned int* tetV3IndexList, unsigned int* tetV4IndexList,
-		unsigned int* startAddressList, int startAtomIndex,
+__global__ void fillPossibleTets(unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
+		unsigned int *beginIndexList, unsigned int *endIndexList, int numAtoms,
+		unsigned int *tetV1IndexList, unsigned int *tetV2IndexList,
+		unsigned int *tetV3IndexList, unsigned int *tetV4IndexList,
+		unsigned int *startAddressList, int startAtomIndex,
 		int chunkAtomCount) {
 	int atomIndex = startAtomIndex + blockIdx.x * blockDim.x + threadIdx.x;
 	if (atomIndex >= numAtoms)
@@ -528,10 +528,10 @@ __global__ void fillPossibleTets(unsigned int* triV1IndexList,
 	}
 }
 
-__global__ void markRealTets(unsigned int* tetV1IndexList,
-		unsigned int * tetV2IndexList, unsigned int * tetV3IndexList,
-		unsigned int * tetV4IndexList, bool * tetMarkList, Atom* atomList,
-		float4 * orthoSphereList, int numAtoms, int numTets, float alpha) {
+__global__ void markRealTets(unsigned int *tetV1IndexList,
+		unsigned int *tetV2IndexList, unsigned int *tetV3IndexList,
+		unsigned int *tetV4IndexList, bool *tetMarkList, Atom *atomList,
+		float4 *orthoSphereList, int numAtoms, int numTets, float alpha) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numTets)
 		return;
@@ -594,12 +594,12 @@ __global__ void initialize() {
 	exactinit();
 }
 
-__global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
-		unsigned int * tetV2IndexList, unsigned int * tetV3IndexList,
-		unsigned int * tetV4IndexList, Atom* atomList, float3 min,
-		unsigned int* beginList, unsigned int* endList, float stepSize,
-		int3 gridSize, float4 * orthoSphereList, int numSpheres,
-		bool * sphereMarkList) {
+__global__ void checkTetsOrthosphere(unsigned int *tetV1IndexList,
+		unsigned int *tetV2IndexList, unsigned int *tetV3IndexList,
+		unsigned int *tetV4IndexList, Atom *atomList, float3 min,
+		unsigned int *beginList, unsigned int *endList, float stepSize,
+		int3 gridSize, float4 *orthoSphereList, int numSpheres,
+		bool *sphereMarkList) {
 	int tetIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	if (tetIndex >= numSpheres)
 		return;
@@ -734,10 +734,10 @@ __global__ void checkTetsOrthosphere(unsigned int* tetV1IndexList,
 	sphereMarkList[tetIndex] = true;
 }
 
-__global__ void generateTrisInTets(unsigned int* tetV1IndexList,
-		unsigned int * tetV2IndexList, unsigned int * tetV3IndexList,
-		unsigned int * tetV4IndexList, int numTets, unsigned int* triV1List,
-		unsigned int* triV2List, unsigned int* triV3List) {
+__global__ void generateTrisInTets(unsigned int *tetV1IndexList,
+		unsigned int *tetV2IndexList, unsigned int *tetV3IndexList,
+		unsigned int *tetV4IndexList, int numTets, unsigned int *triV1List,
+		unsigned int *triV2List, unsigned int *triV3List) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numTets)
 		return;
@@ -754,17 +754,17 @@ __global__ void generateTrisInTets(unsigned int* tetV1IndexList,
 	triV1List[4 * i + 2] = v1;
 	triV2List[4 * i + 2] = v3;
 	triV3List[4 * i + 2] = v4;
-		triV1List[4 * i + 3] = v2;
-		triV2List[4 * i + 3] = v3;
-		triV3List[4 * i + 3] = v4;
+	triV1List[4 * i + 3] = v2;
+	triV2List[4 * i + 3] = v3;
+	triV3List[4 * i + 3] = v4;
 }
 
-__global__ void markTrisForDeletion(unsigned int* triList1V1,
-		unsigned int* triList1V2, unsigned int* triList1V3,
-		unsigned int list1Size, unsigned int* triList2V1,
-		unsigned int* triList2V2, unsigned int* triList2V3,
-		unsigned int list2Size, unsigned int* beginIndexList,
-		unsigned int* endIndexList, bool * triMarkList, int startAtomIndex,
+__global__ void markTrisForDeletion(unsigned int *triList1V1,
+		unsigned int *triList1V2, unsigned int *triList1V3,
+		unsigned int list1Size, unsigned int *triList2V1,
+		unsigned int *triList2V2, unsigned int *triList2V3,
+		unsigned int list2Size, unsigned int *beginIndexList,
+		unsigned int *endIndexList, bool *triMarkList, int startAtomIndex,
 		int chunkAtomCount) {
 	int triIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	if (triIndex >= list1Size)
@@ -795,11 +795,11 @@ __global__ void markTrisForDeletion(unsigned int* triList1V1,
 	triMarkList[triIndex] = true;
 }
 
-__global__ void checkDanglingTris(unsigned int* triV1IndexList,
-		unsigned int * triV2IndexList, unsigned int * triV3IndexList,
-		Atom* atomList, float3 min, unsigned int* beginList,
-		unsigned int* endList, float stepSize, int3 gridSize,
-		float4 * orthosphereList, unsigned int numTris, bool * triMarkList) {
+__global__ void checkDanglingTris(unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
+		Atom *atomList, float3 min, unsigned int *beginList,
+		unsigned int *endList, float stepSize, int3 gridSize,
+		float4 *orthosphereList, unsigned int numTris, bool *triMarkList) {
 	int triIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	if (triIndex >= numTris)
 		return;
@@ -871,9 +871,9 @@ __global__ void checkDanglingTris(unsigned int* triV1IndexList,
 	triMarkList[triIndex] = true;
 }
 
-__global__ void generateEdgesInTris(unsigned int* triV1IndexList,
-		unsigned int* triV2IndexList, unsigned int* triV3IndexList, int numTris,
-		unsigned int* edgeLeftList, unsigned int* edgeRightList) {
+__global__ void generateEdgesInTris(unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList, int numTris,
+		unsigned int *edgeLeftList, unsigned int *edgeRightList) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numTris)
 		return;
@@ -884,15 +884,15 @@ __global__ void generateEdgesInTris(unsigned int* triV1IndexList,
 	edgeRightList[3 * i] = v2;
 	edgeLeftList[3 * i + 1] = v1;
 	edgeRightList[3 * i + 1] = v3;
-		edgeLeftList[3 * i + 2] = v2;
-		edgeRightList[3 * i + 2] = v3;
+	edgeLeftList[3 * i + 2] = v2;
+	edgeRightList[3 * i + 2] = v3;
 }
 
-__global__ void markEdgesForDeletion(unsigned int* edgeList1V1,
-		unsigned int* edgeList1V2, unsigned int list1Size,
-		unsigned int* edgeList2V1, unsigned int* edgeList2V2,
-		unsigned int list2Size, unsigned int* beginIndexList,
-		unsigned int* endIndexList, bool * edgeMarkList, int startAtomIndex,
+__global__ void markEdgesForDeletion(unsigned int *edgeList1V1,
+		unsigned int *edgeList1V2, unsigned int list1Size,
+		unsigned int *edgeList2V1, unsigned int *edgeList2V2,
+		unsigned int list2Size, unsigned int *beginIndexList,
+		unsigned int *endIndexList, bool *edgeMarkList, int startAtomIndex,
 		int chunkAtomCount) {
 	int edgeIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	if (edgeIndex >= list1Size)
@@ -921,10 +921,10 @@ __global__ void markEdgesForDeletion(unsigned int* edgeList1V1,
 	edgeMarkList[edgeIndex] = true;
 }
 
-__global__ void checkDanglingEdges(unsigned int* edgeV1IndexList,
-		unsigned int * edgeV2IndexList, Atom* atomList, float3 min,
-		unsigned int* beginList, unsigned int* endList, float stepSize,
-		int3 gridSize, unsigned int numEdges, bool * edgeMarkList) {
+__global__ void checkDanglingEdges(unsigned int *edgeV1IndexList,
+		unsigned int *edgeV2IndexList, Atom *atomList, float3 min,
+		unsigned int *beginList, unsigned int *endList, float stepSize,
+		int3 gridSize, unsigned int numEdges, bool *edgeMarkList) {
 	int edgeIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	if (edgeIndex >= numEdges)
 		return;
@@ -1021,7 +1021,7 @@ struct removeTriangleIfFalse {
 	__host__ __device__
 	float operator()(
 			const thrust::tuple<bool, unsigned int, unsigned int, unsigned int,
-					float4>& t) {
+			float4>& t) {
 		return (thrust::get<0>(t) == false);
 	}
 };
@@ -1030,7 +1030,7 @@ struct removeTetIfFalse {
 	__host__ __device__
 	float operator()(
 			const thrust::tuple<bool, unsigned int, unsigned int, unsigned int,
-					unsigned int, float4>& t) {
+			unsigned int, float4>& t) {
 		return (thrust::get<0>(t) == false);
 	}
 };
@@ -1046,21 +1046,22 @@ struct TupleCmp {
 	}
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 	thrust::host_vector<Atom> h_atoms;
 	thrust::device_vector<Atom> d_atoms;
 	thrust::device_vector<unsigned int> d_atomCellIndices;
 
-	if (argc < 6){
-                printf("Usage : parallelac-largeData <crd-file> <out-file> <sol-rad> <alpha> <chunk-size>\n");
+	if (argc < 6) {
+		printf(
+				"Usage : parallelac-largeData <crd-file> <out-file> <sol-rad> <alpha> <chunk-size>\n");
 		return 1;
-        }
+	}
 
-        unsigned int numAtoms;
-        float minX, minY, minZ, maxX, maxY, maxZ;
-        float minRadius, maxRadius;
+	unsigned int numAtoms;
+	float minX, minY, minZ, maxX, maxY, maxZ;
+	float minRadius, maxRadius;
 
-	FILE * input;
+	FILE *input;
 	float x, y, z, radius;
 
 	input = fopen(argv[1], "r");
@@ -1072,8 +1073,8 @@ int main(int argc, char** argv) {
 	h_atoms.reserve(numAtoms);
 
 	/* Read the Atoms*/
-        float solventRadius = atof(argv[3]);
-        float alpha = atof(argv[4]);
+	float solventRadius = atof(argv[3]);
+	float alpha = atof(argv[4]);
 	for (int i = 0; i < numAtoms; i++) {
 		fscanf(input, "%f %f %f %f", &x, &y, &z, &radius);
 		Atom atom;
@@ -1108,9 +1109,11 @@ int main(int argc, char** argv) {
 		}
 	}
 	fclose(input);
-        printf("Successfully read the file %s ...\n", argv[1]);
-        printf("The given file has %d atoms. \n\nStarting alpha complex computation for "
-               "alpha = %.3f and solvent radius = %.3f ...\n\n", numAtoms, alpha, solventRadius);
+	printf("Successfully read the file %s ...\n", argv[1]);
+	printf(
+			"The given file has %d atoms. \n\nStarting alpha complex computation for "
+					"alpha = %.3f and solvent radius = %.3f ...\n\n", numAtoms,
+			alpha, solventRadius);
 
 	float possibleMaxRadius = sqrtf(maxRadius * maxRadius + alpha);
 	float stepSize = 2 * (possibleMaxRadius);
@@ -1154,8 +1157,8 @@ int main(int argc, char** argv) {
 	int THREADS = 512;
 	dim3 blocks(numAtoms / THREADS + 1, 1, 1);
 	dim3 threads(THREADS, 1, 1);
-	Atom * d_atomList_ptr = thrust::raw_pointer_cast(&d_atoms[0]);
-	unsigned int * d_cellIndexList_ptr = thrust::raw_pointer_cast(
+	Atom *d_atomList_ptr = thrust::raw_pointer_cast(&d_atoms[0]);
+	unsigned int *d_cellIndexList_ptr = thrust::raw_pointer_cast(
 			&d_atomCellIndices[0]);
 	computeCellIndex<<<blocks, threads>>>(d_atomList_ptr, d_cellIndexList_ptr,
 			numAtoms, make_float3(minX, minY, minZ),
@@ -1193,9 +1196,8 @@ int main(int argc, char** argv) {
 			gridExtentX * gridExtentY * gridExtentZ);
 	thrust::device_vector<unsigned int> d_indexEnd(
 			gridExtentX * gridExtentY * gridExtentZ);
-	unsigned int * d_indexBegin_ptr = thrust::raw_pointer_cast(
-			&d_indexBegin[0]);
-	unsigned int * d_indexEnd_ptr = thrust::raw_pointer_cast(&d_indexEnd[0]);
+	unsigned int *d_indexBegin_ptr = thrust::raw_pointer_cast(&d_indexBegin[0]);
+	unsigned int *d_indexEnd_ptr = thrust::raw_pointer_cast(&d_indexEnd[0]);
 	thrust::counting_iterator<unsigned int> search_begin(0);
 	thrust::lower_bound(d_atomCellIndices.begin(), d_atomCellIndices.end(),
 			search_begin,
@@ -1221,9 +1223,10 @@ int main(int argc, char** argv) {
 	thrust::host_vector<unsigned int> h_final_EdgesV1;
 	thrust::host_vector<unsigned int> h_final_EdgesV2;
 
-        int chunkSuggestion = atoi(argv[5]);
-        int NUM_CHUNK_ATOMS = 512;
-        while (NUM_CHUNK_ATOMS < chunkSuggestion) NUM_CHUNK_ATOMS = 2 * NUM_CHUNK_ATOMS;
+	int chunkSuggestion = atoi(argv[5]);
+	int NUM_CHUNK_ATOMS = 512;
+	while (NUM_CHUNK_ATOMS < chunkSuggestion)
+		NUM_CHUNK_ATOMS = 2 * NUM_CHUNK_ATOMS;
 
 	for (int startAtomIndex = 0; startAtomIndex < numAtoms; startAtomIndex +=
 			NUM_CHUNK_ATOMS) {
@@ -1235,7 +1238,7 @@ int main(int argc, char** argv) {
 		int THREADS = 512;
 		blocks = dim3(NUM_CHUNK_ATOMS / THREADS, 1, 1);
 		threads = dim3(THREADS, 1, 1);
-		unsigned int * d_possibleEdgeCount_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_possibleEdgeCount_ptr = thrust::raw_pointer_cast(
 				&d_possibleEdgeCount[0]);
 		computePossibleEdgeCount<<<blocks, threads>>>(d_indexBegin_ptr,
 				d_indexEnd_ptr, d_cellIndexList_ptr, numAtoms,
@@ -1250,11 +1253,11 @@ int main(int argc, char** argv) {
 		thrust::device_vector<unsigned int> d_edgeLeftIndex(numEdges);
 		thrust::device_vector<unsigned int> d_edgeRightIndex(numEdges);
 		thrust::device_vector<bool> d_edgeMarkList(numEdges, false);
-		unsigned int * d_edgeLeftIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edgeLeftIndex_ptr = thrust::raw_pointer_cast(
 				&d_edgeLeftIndex[0]);
-		unsigned int * d_edgeRightIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edgeRightIndex_ptr = thrust::raw_pointer_cast(
 				&d_edgeRightIndex[0]);
-		bool * d_edgeMark_ptr = thrust::raw_pointer_cast(&d_edgeMarkList[0]);
+		bool *d_edgeMark_ptr = thrust::raw_pointer_cast(&d_edgeMarkList[0]);
 		fillPotentialEdges<<<blocks, threads>>>(d_indexBegin_ptr,
 				d_indexEnd_ptr, d_cellIndexList_ptr, numAtoms,
 				d_possibleEdgeCount_ptr, d_edgeLeftIndex_ptr,
@@ -1281,9 +1284,11 @@ int main(int argc, char** argv) {
 				removeEdgeIfFalse());
 		// Erase the removed elements from the vectors
 		BoolIntDIterTuple endTuple = newEnd.get_iterator_tuple();
-		d_edgeMarkList.erase(thrust::get<0>(endTuple), d_edgeMarkList.end());
-		d_edgeLeftIndex.erase(thrust::get<1>(endTuple), d_edgeLeftIndex.end());
-		d_edgeRightIndex.erase(thrust::get<2>(endTuple),
+		d_edgeMarkList.erase(thrust::get < 0 > (endTuple),
+				d_edgeMarkList.end());
+		d_edgeLeftIndex.erase(thrust::get < 1 > (endTuple),
+				d_edgeLeftIndex.end());
+		d_edgeRightIndex.erase(thrust::get < 2 > (endTuple),
 				d_edgeRightIndex.end());
 
 		thrust::sort_by_key(d_edgeLeftIndex.begin(), d_edgeLeftIndex.end(),
@@ -1311,11 +1316,11 @@ int main(int argc, char** argv) {
 		triAlphaTimer.restart();
 		thrust::device_vector<unsigned int> d_possibleTriCount(NUM_CHUNK_ATOMS,
 				0u);
-		unsigned int * d_possibleTriCount_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_possibleTriCount_ptr = thrust::raw_pointer_cast(
 				&d_possibleTriCount[0]);
-		unsigned int * d_edge_beginIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edge_beginIndex_ptr = thrust::raw_pointer_cast(
 				&d_edge_beginIndex[0]);
-		unsigned int * d_edge_endIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edge_endIndex_ptr = thrust::raw_pointer_cast(
 				&d_edge_endIndex[0]);
 		blocks = dim3(NUM_CHUNK_ATOMS / THREADS, 1, 1);
 		threads = dim3(THREADS, 1, 1);
@@ -1338,14 +1343,14 @@ int main(int argc, char** argv) {
 		thrust::device_vector<unsigned int> d_triV3Index(numTris, 0u);
 		thrust::device_vector<bool> d_triMarkList(numTris, false);
 		thrust::device_vector<float4> d_p1List(numTris);
-		unsigned int * d_triV1Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_triV1Index_ptr = thrust::raw_pointer_cast(
 				&d_triV1Index[0]);
-		unsigned int * d_triV2Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_triV2Index_ptr = thrust::raw_pointer_cast(
 				&d_triV2Index[0]);
-		unsigned int * d_triV3Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_triV3Index_ptr = thrust::raw_pointer_cast(
 				&d_triV3Index[0]);
-		bool * d_triMarkList_ptr = thrust::raw_pointer_cast(&d_triMarkList[0]);
-		float4 * d_p1List_ptr = thrust::raw_pointer_cast(&d_p1List[0]);
+		bool *d_triMarkList_ptr = thrust::raw_pointer_cast(&d_triMarkList[0]);
+		float4 *d_p1List_ptr = thrust::raw_pointer_cast(&d_p1List[0]);
 		fillPossibleTriangles<<<blocks, threads>>>(d_edgeLeftIndex_ptr,
 				d_edgeRightIndex_ptr, d_edge_beginIndex_ptr,
 				d_edge_endIndex_ptr, numAtoms, d_triV1Index_ptr,
@@ -1372,11 +1377,11 @@ int main(int argc, char** argv) {
 				removeTriangleIfFalse());
 		// Erase the removed elements from the vectors
 		BoolInt3DIterTuple endTuple2 = newEnd2.get_iterator_tuple();
-		d_triMarkList.erase(thrust::get<0>(endTuple2), d_triMarkList.end());
-		d_triV1Index.erase(thrust::get<1>(endTuple2), d_triV1Index.end());
-		d_triV2Index.erase(thrust::get<2>(endTuple2), d_triV2Index.end());
-		d_triV3Index.erase(thrust::get<3>(endTuple2), d_triV3Index.end());
-		d_p1List.erase(thrust::get<4>(endTuple2), d_p1List.end());
+		d_triMarkList.erase(thrust::get < 0 > (endTuple2), d_triMarkList.end());
+		d_triV1Index.erase(thrust::get < 1 > (endTuple2), d_triV1Index.end());
+		d_triV2Index.erase(thrust::get < 2 > (endTuple2), d_triV2Index.end());
+		d_triV3Index.erase(thrust::get < 3 > (endTuple2), d_triV3Index.end());
+		d_p1List.erase(thrust::get < 4 > (endTuple2), d_p1List.end());
 		//gpuErrchk(cudaPeekAtLastError());
 		//gpuErrchk(cudaDeviceSynchronize());
 		cudaDeviceSynchronize();
@@ -1398,11 +1403,11 @@ int main(int argc, char** argv) {
 		tetAlphaTimer.restart();
 		thrust::device_vector<unsigned int> d_possibleTetCount(NUM_CHUNK_ATOMS,
 				0u);
-		unsigned int * d_possibleTetCount_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_possibleTetCount_ptr = thrust::raw_pointer_cast(
 				&d_possibleTetCount[0]);
-		unsigned int * d_tri_beginIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_tri_beginIndex_ptr = thrust::raw_pointer_cast(
 				&d_tri_beginIndex[0]);
-		unsigned int * d_tri_endIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_tri_endIndex_ptr = thrust::raw_pointer_cast(
 				&d_tri_endIndex[0]);
 		blocks = dim3(NUM_CHUNK_ATOMS / THREADS, 1, 1);
 		computePossibleTetCount<<<blocks, threads>>>(d_triV1Index_ptr,
@@ -1424,16 +1429,16 @@ int main(int argc, char** argv) {
 		thrust::device_vector<unsigned int> d_tetV4Index(numTets, 0u);
 		thrust::device_vector<bool> d_tetMarkList(numTets, false);
 		thrust::device_vector<float4> d_orthoSphereList(numTets);
-		unsigned int * d_tetV1Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_tetV1Index_ptr = thrust::raw_pointer_cast(
 				&d_tetV1Index[0]);
-		unsigned int * d_tetV2Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_tetV2Index_ptr = thrust::raw_pointer_cast(
 				&d_tetV2Index[0]);
-		unsigned int * d_tetV3Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_tetV3Index_ptr = thrust::raw_pointer_cast(
 				&d_tetV3Index[0]);
-		unsigned int * d_tetV4Index_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_tetV4Index_ptr = thrust::raw_pointer_cast(
 				&d_tetV4Index[0]);
-		bool * d_tetMarkList_ptr = thrust::raw_pointer_cast(&d_tetMarkList[0]);
-		float4 * d_orthoSphereList_ptr = thrust::raw_pointer_cast(
+		bool *d_tetMarkList_ptr = thrust::raw_pointer_cast(&d_tetMarkList[0]);
+		float4 *d_orthoSphereList_ptr = thrust::raw_pointer_cast(
 				&d_orthoSphereList[0]);
 
 		fillPossibleTets<<<blocks, threads>>>(d_triV1Index_ptr,
@@ -1465,12 +1470,12 @@ int main(int argc, char** argv) {
 								d_orthoSphereList.end())), removeTetIfFalse());
 		// Erase the removed elements from the vectors
 		BoolInt4DIterTuple endTuple3 = newEnd3.get_iterator_tuple();
-		d_tetMarkList.erase(thrust::get<0>(endTuple3), d_tetMarkList.end());
-		d_tetV1Index.erase(thrust::get<1>(endTuple3), d_tetV1Index.end());
-		d_tetV2Index.erase(thrust::get<2>(endTuple3), d_tetV2Index.end());
-		d_tetV3Index.erase(thrust::get<3>(endTuple3), d_tetV3Index.end());
-		d_tetV4Index.erase(thrust::get<4>(endTuple3), d_tetV4Index.end());
-		d_orthoSphereList.erase(thrust::get<5>(endTuple3),
+		d_tetMarkList.erase(thrust::get < 0 > (endTuple3), d_tetMarkList.end());
+		d_tetV1Index.erase(thrust::get < 1 > (endTuple3), d_tetV1Index.end());
+		d_tetV2Index.erase(thrust::get < 2 > (endTuple3), d_tetV2Index.end());
+		d_tetV3Index.erase(thrust::get < 3 > (endTuple3), d_tetV3Index.end());
+		d_tetV4Index.erase(thrust::get < 4 > (endTuple3), d_tetV4Index.end());
+		d_orthoSphereList.erase(thrust::get < 5 > (endTuple3),
 				d_orthoSphereList.end());
 		tetAlphaTimer.stop();
 
@@ -1504,12 +1509,12 @@ int main(int argc, char** argv) {
 								d_orthoSphereList.end())), removeTetIfFalse());
 		// Erase the removed elements from the vectors
 		endTuple3 = newEnd3.get_iterator_tuple();
-		d_tetMarkList.erase(thrust::get<0>(endTuple3), d_tetMarkList.end());
-		d_tetV1Index.erase(thrust::get<1>(endTuple3), d_tetV1Index.end());
-		d_tetV2Index.erase(thrust::get<2>(endTuple3), d_tetV2Index.end());
-		d_tetV3Index.erase(thrust::get<3>(endTuple3), d_tetV3Index.end());
-		d_tetV4Index.erase(thrust::get<4>(endTuple3), d_tetV4Index.end());
-		d_orthoSphereList.erase(thrust::get<5>(endTuple3),
+		d_tetMarkList.erase(thrust::get < 0 > (endTuple3), d_tetMarkList.end());
+		d_tetV1Index.erase(thrust::get < 1 > (endTuple3), d_tetV1Index.end());
+		d_tetV2Index.erase(thrust::get < 2 > (endTuple3), d_tetV2Index.end());
+		d_tetV3Index.erase(thrust::get < 3 > (endTuple3), d_tetV3Index.end());
+		d_tetV4Index.erase(thrust::get < 4 > (endTuple3), d_tetV4Index.end());
+		d_orthoSphereList.erase(thrust::get < 5 > (endTuple3),
 				d_orthoSphereList.end());
 		gpuErrchk(cudaPeekAtLastError());
 		gpuErrchk(cudaDeviceSynchronize());
@@ -1521,11 +1526,11 @@ int main(int argc, char** argv) {
 				finalTetCount * 4);
 		thrust::device_vector<unsigned int> d_trisInTetsListV3(
 				finalTetCount * 4);
-		unsigned int * d_trisInTetsListV1_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_trisInTetsListV1_ptr = thrust::raw_pointer_cast(
 				&d_trisInTetsListV1[0]);
-		unsigned int * d_trisInTetsListV2_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_trisInTetsListV2_ptr = thrust::raw_pointer_cast(
 				&d_trisInTetsListV2[0]);
-		unsigned int * d_trisInTetsListV3_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_trisInTetsListV3_ptr = thrust::raw_pointer_cast(
 				&d_trisInTetsListV3[0]);
 		blocks = dim3(finalTetCount / THREADS + 1, 1, 1);
 		generateTrisInTets<<<blocks, threads>>>(d_tetV1Index_ptr,
@@ -1568,11 +1573,11 @@ int main(int argc, char** argv) {
 								d_trisInTetsListV2.end(),
 								d_trisInTetsListV3.end())));
 		UInt3DIterTuple endTuple4 = newEnd4.get_iterator_tuple();
-		d_trisInTetsListV1.erase(thrust::get<0>(endTuple4),
+		d_trisInTetsListV1.erase(thrust::get < 0 > (endTuple4),
 				d_trisInTetsListV1.end());
-		d_trisInTetsListV2.erase(thrust::get<1>(endTuple4),
+		d_trisInTetsListV2.erase(thrust::get < 1 > (endTuple4),
 				d_trisInTetsListV2.end());
-		d_trisInTetsListV3.erase(thrust::get<2>(endTuple4),
+		d_trisInTetsListV3.erase(thrust::get < 2 > (endTuple4),
 				d_trisInTetsListV3.end());
 		cudaDeviceSynchronize();
 
@@ -1592,9 +1597,9 @@ int main(int argc, char** argv) {
 				d_trisInTetsListV1.end(), search_begin + startAtomIndex,
 				search_begin + startAtomIndex + NUM_CHUNK_ATOMS,
 				d_triInTets_endIndex.begin());
-		unsigned int * d_triInTets_beginIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_triInTets_beginIndex_ptr = thrust::raw_pointer_cast(
 				&d_triInTets_beginIndex[0]);
-		unsigned int * d_triInTets_endIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_triInTets_endIndex_ptr = thrust::raw_pointer_cast(
 				&d_triInTets_endIndex[0]);
 		markTrisForDeletion<<<blocks, threads>>>(d_triV1Index_ptr,
 				d_triV2Index_ptr, d_triV3Index_ptr, d_triV1Index.size(),
@@ -1617,11 +1622,11 @@ int main(int argc, char** argv) {
 				removeTriangleIfFalse());
 		// Erase the removed elements from the vectors
 		endTuple2 = newEnd2.get_iterator_tuple();
-		d_triMarkList.erase(thrust::get<0>(endTuple2), d_triMarkList.end());
-		d_triV1Index.erase(thrust::get<1>(endTuple2), d_triV1Index.end());
-		d_triV2Index.erase(thrust::get<2>(endTuple2), d_triV2Index.end());
-		d_triV3Index.erase(thrust::get<3>(endTuple2), d_triV3Index.end());
-		d_p1List.erase(thrust::get<4>(endTuple2), d_p1List.end());
+		d_triMarkList.erase(thrust::get < 0 > (endTuple2), d_triMarkList.end());
+		d_triV1Index.erase(thrust::get < 1 > (endTuple2), d_triV1Index.end());
+		d_triV2Index.erase(thrust::get < 2 > (endTuple2), d_triV2Index.end());
+		d_triV3Index.erase(thrust::get < 3 > (endTuple2), d_triV3Index.end());
+		d_p1List.erase(thrust::get < 4 > (endTuple2), d_p1List.end());
 		gpuErrchk(cudaPeekAtLastError());
 		gpuErrchk(cudaDeviceSynchronize());
 		int potentialTrisNotInTets = d_triV1Index.size();
@@ -1644,11 +1649,11 @@ int main(int argc, char** argv) {
 				removeTriangleIfFalse());
 		// Erase the removed elements from the vectors
 		endTuple2 = newEnd2.get_iterator_tuple();
-		d_triMarkList.erase(thrust::get<0>(endTuple2), d_triMarkList.end());
-		d_triV1Index.erase(thrust::get<1>(endTuple2), d_triV1Index.end());
-		d_triV2Index.erase(thrust::get<2>(endTuple2), d_triV2Index.end());
-		d_triV3Index.erase(thrust::get<3>(endTuple2), d_triV3Index.end());
-		d_p1List.erase(thrust::get<4>(endTuple2), d_p1List.end());
+		d_triMarkList.erase(thrust::get < 0 > (endTuple2), d_triMarkList.end());
+		d_triV1Index.erase(thrust::get < 1 > (endTuple2), d_triV1Index.end());
+		d_triV2Index.erase(thrust::get < 2 > (endTuple2), d_triV2Index.end());
+		d_triV3Index.erase(thrust::get < 3 > (endTuple2), d_triV3Index.end());
+		d_p1List.erase(thrust::get < 4 > (endTuple2), d_p1List.end());
 		gpuErrchk(cudaPeekAtLastError());
 		gpuErrchk(cudaDeviceSynchronize());
 		int alphaTrisNotInTets = d_triV1Index.size();
@@ -1658,11 +1663,11 @@ int main(int argc, char** argv) {
 				trisInTets + alphaTrisNotInTets);
 		thrust::device_vector<unsigned int> d_finaltrisV3(
 				trisInTets + alphaTrisNotInTets);
-		unsigned int * d_finaltrisV1_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_finaltrisV1_ptr = thrust::raw_pointer_cast(
 				&d_finaltrisV1[0]);
-		unsigned int * d_finaltrisV2_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_finaltrisV2_ptr = thrust::raw_pointer_cast(
 				&d_finaltrisV2[0]);
-		unsigned int * d_finaltrisV3_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_finaltrisV3_ptr = thrust::raw_pointer_cast(
 				&d_finaltrisV3[0]);
 		thrust::merge(
 				thrust::make_zip_iterator(
@@ -1702,9 +1707,9 @@ int main(int argc, char** argv) {
 				finalTriCount * 3);
 		thrust::device_vector<unsigned int> d_edgesInTrisListV2(
 				finalTriCount * 3);
-		unsigned int * d_edgesInTrisListV1_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edgesInTrisListV1_ptr = thrust::raw_pointer_cast(
 				&d_edgesInTrisListV1[0]);
-		unsigned int * d_edgesInTrisListV2_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edgesInTrisListV2_ptr = thrust::raw_pointer_cast(
 				&d_edgesInTrisListV2[0]);
 		blocks = dim3(finalTriCount / THREADS + 1, 1, 1);
 		generateEdgesInTris<<<blocks, threads>>>(d_finaltrisV1_ptr,
@@ -1732,9 +1737,9 @@ int main(int argc, char** argv) {
 						thrust::make_tuple(d_edgesInTrisListV1.end(),
 								d_edgesInTrisListV2.end())));
 		UInt2DIterTuple endTuple6 = newEnd6.get_iterator_tuple();
-		d_edgesInTrisListV1.erase(thrust::get<0>(endTuple6),
+		d_edgesInTrisListV1.erase(thrust::get < 0 > (endTuple6),
 				d_edgesInTrisListV1.end());
-		d_edgesInTrisListV2.erase(thrust::get<1>(endTuple6),
+		d_edgesInTrisListV2.erase(thrust::get < 1 > (endTuple6),
 				d_edgesInTrisListV2.end());
 		cudaDeviceSynchronize();
 
@@ -1754,9 +1759,9 @@ int main(int argc, char** argv) {
 				d_edgesInTrisListV1.end(), search_begin + startAtomIndex,
 				search_begin + startAtomIndex + NUM_CHUNK_ATOMS,
 				d_edgesInTris_endIndex.begin());
-		unsigned int * d_edgesInTris_beginIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edgesInTris_beginIndex_ptr = thrust::raw_pointer_cast(
 				&d_edgesInTris_beginIndex[0]);
-		unsigned int * d_edgesInTris_endIndex_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_edgesInTris_endIndex_ptr = thrust::raw_pointer_cast(
 				&d_edgesInTris_endIndex[0]);
 
 		markEdgesForDeletion<<<blocks, threads>>>(d_edgeLeftIndex_ptr,
@@ -1782,9 +1787,11 @@ int main(int argc, char** argv) {
 				removeEdgeIfFalse());
 		// Erase the removed elements from the vectors
 		endTuple = newEnd.get_iterator_tuple();
-		d_edgeMarkList.erase(thrust::get<0>(endTuple), d_edgeMarkList.end());
-		d_edgeLeftIndex.erase(thrust::get<1>(endTuple), d_edgeLeftIndex.end());
-		d_edgeRightIndex.erase(thrust::get<2>(endTuple),
+		d_edgeMarkList.erase(thrust::get < 0 > (endTuple),
+				d_edgeMarkList.end());
+		d_edgeLeftIndex.erase(thrust::get < 1 > (endTuple),
+				d_edgeLeftIndex.end());
+		d_edgeRightIndex.erase(thrust::get < 2 > (endTuple),
 				d_edgeRightIndex.end());
 		cudaDeviceSynchronize();
 		edgeOrthTimer.stop();
@@ -1810,9 +1817,11 @@ int main(int argc, char** argv) {
 				removeEdgeIfFalse());
 		// Erase the removed elements from the vectors
 		endTuple = newEnd.get_iterator_tuple();
-		d_edgeMarkList.erase(thrust::get<0>(endTuple), d_edgeMarkList.end());
-		d_edgeLeftIndex.erase(thrust::get<1>(endTuple), d_edgeLeftIndex.end());
-		d_edgeRightIndex.erase(thrust::get<2>(endTuple),
+		d_edgeMarkList.erase(thrust::get < 0 > (endTuple),
+				d_edgeMarkList.end());
+		d_edgeLeftIndex.erase(thrust::get < 1 > (endTuple),
+				d_edgeLeftIndex.end());
+		d_edgeRightIndex.erase(thrust::get < 2 > (endTuple),
 				d_edgeRightIndex.end());
 		cudaDeviceSynchronize();
 
@@ -1821,9 +1830,9 @@ int main(int argc, char** argv) {
 				edgesInTris + alphaEdgesNotInTris);
 		thrust::device_vector<unsigned int> d_finalEdgesV2(
 				edgesInTris + alphaEdgesNotInTris);
-		unsigned int * d_finalEdgesV1_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_finalEdgesV1_ptr = thrust::raw_pointer_cast(
 				&d_finalEdgesV1[0]);
-		unsigned int * d_finalEdgesV2_ptr = thrust::raw_pointer_cast(
+		unsigned int *d_finalEdgesV2_ptr = thrust::raw_pointer_cast(
 				&d_finalEdgesV2[0]);
 		thrust::merge(
 				thrust::make_zip_iterator(
@@ -1911,24 +1920,24 @@ int main(int argc, char** argv) {
 		cudaDeviceSynchronize();
 	}
 
-        memTimer.restart();
-        thrust::device_vector<unsigned int> d_final_trisV1;
+	memTimer.restart();
+	thrust::device_vector<unsigned int> d_final_trisV1;
 	thrust::device_vector<unsigned int> d_final_trisV2;
 	thrust::device_vector<unsigned int> d_final_trisV3;
 
-        d_final_trisV1 = h_final_trisV1;
-        d_final_trisV2 = h_final_trisV2;
-        d_final_trisV3 = h_final_trisV3;
+	d_final_trisV1 = h_final_trisV1;
+	d_final_trisV2 = h_final_trisV2;
+	d_final_trisV3 = h_final_trisV3;
 
 	thrust::device_vector<unsigned int> d_final_EdgesV1;
 	thrust::device_vector<unsigned int> d_final_EdgesV2;
-        
-        d_final_EdgesV1 = h_final_EdgesV1;
-        d_final_EdgesV2 = h_final_EdgesV2;
-        cudaDeviceSynchronize();
-        memTimer.stop();
 
-        edgeOrthTimer.restart();
+	d_final_EdgesV1 = h_final_EdgesV1;
+	d_final_EdgesV2 = h_final_EdgesV2;
+	cudaDeviceSynchronize();
+	memTimer.stop();
+
+	edgeOrthTimer.restart();
 	typedef thrust::device_vector<unsigned int>::iterator UIntDIter;
 
 	thrust::sort_by_key(d_final_EdgesV2.begin(), d_final_EdgesV2.end(),
@@ -1945,12 +1954,14 @@ int main(int argc, char** argv) {
 					thrust::make_tuple(d_final_EdgesV1.end(),
 							d_final_EdgesV2.end())));
 	UInt2DIterTuple endTuple60 = newEnd60.get_iterator_tuple();
-	d_final_EdgesV1.erase(thrust::get<0>(endTuple60), d_final_EdgesV1.end());
-	d_final_EdgesV2.erase(thrust::get<1>(endTuple60), d_final_EdgesV2.end());
-        cudaDeviceSynchronize();
-        edgeOrthTimer.stop();
+	d_final_EdgesV1.erase(thrust::get < 0 > (endTuple60),
+			d_final_EdgesV1.end());
+	d_final_EdgesV2.erase(thrust::get < 1 > (endTuple60),
+			d_final_EdgesV2.end());
+	cudaDeviceSynchronize();
+	edgeOrthTimer.stop();
 
-        triOrthoTimer.restart();
+	triOrthoTimer.restart();
 	thrust::sort_by_key(d_final_trisV3.begin(), d_final_trisV3.end(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(d_final_trisV1.begin(),
@@ -1973,65 +1984,76 @@ int main(int argc, char** argv) {
 					thrust::make_tuple(d_final_trisV1.end(),
 							d_final_trisV2.end(), d_final_trisV3.end())));
 	UInt3DIterTuple endTuple40 = newEnd40.get_iterator_tuple();
-	d_final_trisV1.erase(thrust::get<0>(endTuple40), d_final_trisV1.end());
-	d_final_trisV2.erase(thrust::get<1>(endTuple40), d_final_trisV2.end());
-	d_final_trisV3.erase(thrust::get<2>(endTuple40), d_final_trisV3.end());
-        cudaDeviceSynchronize();
-        triOrthoTimer.stop();
+	d_final_trisV1.erase(thrust::get < 0 > (endTuple40), d_final_trisV1.end());
+	d_final_trisV2.erase(thrust::get < 1 > (endTuple40), d_final_trisV2.end());
+	d_final_trisV3.erase(thrust::get < 2 > (endTuple40), d_final_trisV3.end());
+	cudaDeviceSynchronize();
+	triOrthoTimer.stop();
 
-        memTimer.restart();
-        h_final_trisV1 = d_final_trisV1;
-        h_final_trisV2 = d_final_trisV2;
-        h_final_trisV3 = d_final_trisV3;
-        h_final_EdgesV1 = d_final_EdgesV1;
-        h_final_EdgesV2 = d_final_EdgesV2;
-        cudaDeviceSynchronize();
-        memTimer.stop();
+	memTimer.restart();
+	h_final_trisV1 = d_final_trisV1;
+	h_final_trisV2 = d_final_trisV2;
+	h_final_trisV3 = d_final_trisV3;
+	h_final_EdgesV1 = d_final_EdgesV1;
+	h_final_EdgesV2 = d_final_EdgesV2;
+	cudaDeviceSynchronize();
+	memTimer.stop();
 
-        printf("Alpha complex computed.\n\n");
+	printf("Alpha complex computed.\n\n");
 	printf("Number of vertices: %15d\n", numAtoms);
-        printf("Number of edges: %18ld\n", h_final_EdgesV1.size());
-        printf("Number of triangles: %14ld\n", h_final_trisV1.size());
+	printf("Number of edges: %18ld\n", h_final_EdgesV1.size());
+	printf("Number of triangles: %14ld\n", h_final_trisV1.size());
 	printf("Number of tetrahedra: %13ld\n", h_final_tetV1Index.size());
-        printf("Total simplices: %18ld\n", (numAtoms + h_final_EdgesV1.size() + h_final_trisV1.size() + h_final_tetV1Index.size()));
+	printf("Total simplices: %18ld\n",
+			(numAtoms + h_final_EdgesV1.size() + h_final_trisV1.size()
+					+ h_final_tetV1Index.size()));
 
-	printf("\nTime taken (ms):\nData transfer: %20.3f\nGrid computation: %17.3f\nPotential edges: %18.3f\n"
-                        "Potential triangles: %14.3f\nPotential tetrahedra: %13.3f\nAC2 test for tetrahedra: %10.3f\n"
-                        "AC2 test for triangles: %11.3f\nAC2 test for edges: %15.3f\n",
-			memTimer.value() * 1000, gridTimer.value() * 1000, edgeAlphaTimer.value() * 1000,
-			triAlphaTimer.value() * 1000, tetAlphaTimer.value() * 1000, tetOrthoTimer.value() * 1000,
+	printf(
+			"\nTime taken (ms):\nData transfer: %20.3f\nGrid computation: %17.3f\nPotential edges: %18.3f\n"
+					"Potential triangles: %14.3f\nPotential tetrahedra: %13.3f\nAC2 test for tetrahedra: %10.3f\n"
+					"AC2 test for triangles: %11.3f\nAC2 test for edges: %15.3f\n",
+			memTimer.value() * 1000, gridTimer.value() * 1000,
+			edgeAlphaTimer.value() * 1000, triAlphaTimer.value() * 1000,
+			tetAlphaTimer.value() * 1000, tetOrthoTimer.value() * 1000,
 			triOrthoTimer.value() * 1000, edgeOrthTimer.value() * 1000);
-        printf("Total time taken (ms): %12.3f\n", (memTimer.value() + gridTimer.value() + edgeAlphaTimer.value() + 
-                        triAlphaTimer.value() + tetAlphaTimer.value() + tetOrthoTimer.value() + triOrthoTimer.value() 
-                        + edgeOrthTimer.value()) * 1000);
+	printf("Total time taken (ms): %12.3f\n",
+			(memTimer.value() + gridTimer.value() + edgeAlphaTimer.value()
+					+ triAlphaTimer.value() + tetAlphaTimer.value()
+					+ tetOrthoTimer.value() + triOrthoTimer.value()
+					+ edgeOrthTimer.value()) * 1000);
 
 	printf("\nWriting computed alpha complex to the file %s ...\n", argv[2]);
 
 	FILE *fp = fopen(argv[2], "w");
-        fprintf(fp, "%d %ld %ld %ld\n", numAtoms, h_final_EdgesV1.size(), h_final_trisV1.size(), h_final_tetV1Index.size());
+	fprintf(fp, "%d %ld %ld %ld\n", numAtoms, h_final_EdgesV1.size(),
+			h_final_trisV1.size(), h_final_tetV1Index.size());
 
-        for (int i = 0; i < numAtoms; i++) {
-            fprintf(fp, "%9.5lf %9.5lf %9.5lf %9.5lf\n", h_atoms[i].x, h_atoms[i].y, h_atoms[i].z, h_atoms[i].radius);
-        }
-        for (int i = 0; i < h_final_EdgesV1.size(); i++) {
-            fprintf(fp, "%9d %9d\n", h_final_EdgesV1[i], h_final_EdgesV2[i]);
-        }
-        for (int i = 0; i < h_final_trisV1.size(); i++) {
-            fprintf(fp, "%9d %9d %9d\n", h_final_trisV1[i], h_final_trisV2[i], h_final_trisV3[i]);
-        }
-        for (int i = 0; i < h_final_tetV1Index.size(); i++) {
-            fprintf(fp, "%9d %9d %9d %9d\n", h_final_tetV1Index[i], h_final_tetV2Index[i], h_final_tetV3Index[i], h_final_tetV4Index[i]);
-        }
+	for (int i = 0; i < numAtoms; i++) {
+		fprintf(fp, "%9.5lf %9.5lf %9.5lf %9.5lf\n", h_atoms[i].x, h_atoms[i].y,
+				h_atoms[i].z, h_atoms[i].radius);
+	}
+	for (int i = 0; i < h_final_EdgesV1.size(); i++) {
+		fprintf(fp, "%9d %9d\n", h_final_EdgesV1[i], h_final_EdgesV2[i]);
+	}
+	for (int i = 0; i < h_final_trisV1.size(); i++) {
+		fprintf(fp, "%9d %9d %9d\n", h_final_trisV1[i], h_final_trisV2[i],
+				h_final_trisV3[i]);
+	}
+	for (int i = 0; i < h_final_tetV1Index.size(); i++) {
+		fprintf(fp, "%9d %9d %9d %9d\n", h_final_tetV1Index[i],
+				h_final_tetV2Index[i], h_final_tetV3Index[i],
+				h_final_tetV4Index[i]);
+	}
 
 	h_atoms.clear();
 	d_atoms.clear();
 	d_atomCellIndices.clear();
 	d_origAtomIndices.clear();
-        d_final_trisV1.clear();
-        d_final_trisV2.clear();
-        d_final_trisV3.clear();
-        d_final_EdgesV1.clear();
-        d_final_EdgesV2.clear();
+	d_final_trisV1.clear();
+	d_final_trisV2.clear();
+	d_final_trisV3.clear();
+	d_final_EdgesV1.clear();
+	d_final_EdgesV2.clear();
 
 	h_final_EdgesV1.clear();
 	h_final_EdgesV2.clear();
@@ -2044,3 +2066,4 @@ int main(int argc, char** argv) {
 	h_final_tetV4Index.clear();
 	return 0;
 }
+
