@@ -261,7 +261,7 @@ __global__ void fillPossibleTriangles(unsigned int *edgeLeftIndexList,
 	}
 }
 
-__global__ void markRealTriangles1(unsigned int *triV1IndexList,
+__global__ void markRealTriangles(unsigned int *triV1IndexList,
 		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
 		bool *triMarkList, float4 *orthoSphereList, Atom *atomList,
 		int numAtoms, int numTris, float alpha) {
@@ -1202,7 +1202,7 @@ int main(int argc, char **argv) {
 			numAtoms, d_triV1Index_ptr, d_triV2Index_ptr, d_triV3Index_ptr,
 			d_possibleTriCount_ptr);
 	blocks = dim3(numTris / THREADS + 1, 1, 1);
-	markRealTriangles1<<<blocks, threads>>>(d_triV1Index_ptr, d_triV2Index_ptr,
+	markRealTriangles<<<blocks, threads>>>(d_triV1Index_ptr, d_triV2Index_ptr,
 			d_triV3Index_ptr, d_triMarkList_ptr, d_p1List_ptr, d_atomList_ptr,
 			numAtoms, numTris, alpha);
 	// Make zip_iterator easy to use

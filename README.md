@@ -33,7 +33,7 @@ $ parallelac-largeData <crd-file> <out-file> <sol-rad> <alpha> <chunk-size>
 
 Where:
 
- 1. `<crd-file>` is the input file in CRD format. A sample CRD file is provided named 1GRM.crd.
+ 1. `<crd-file>` is the input file in CRD format. A few sample CRD files are provided in the folder called **data**.
  2. `<out-file>` is the output alpha complex.
  3. `<sol-rad>` is the solvent radius which can be added to the atom radii before computation of the alpha complex.
  4. `<alpha>` is the alpha value.
