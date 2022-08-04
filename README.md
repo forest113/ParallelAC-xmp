@@ -47,6 +47,45 @@ Some example CRD files are provided in the folder called **data**. It contains a
 
 ---
 
+## References
+
+For more information about this algorithm, refer to follwoing papers. Please cite these publications if you use this method or the library in your work.
+
+
+```
+@inproceedings{masoodSocCG2020,
+  author    = {Talha Bin Masood and
+               Tathagata Ray and
+               Vijay Natarajan},
+  editor    = {Sergio Cabello and Danny Z. Chen},
+  title     = {Parallel computation of alpha complex for biomolecules},
+  booktitle = {36th International Symposium on Computational Geometry, SoCG 2020, June 23-26, 2020, Z\"{u}rich, Switzerland},
+  series    = {LIPIcs},
+  volume    = {164},
+  pages     = {17:1--17:16},
+  publisher = {Schloss Dagstuhl - Leibniz-Zentrum f{\"{u}}r Informatik},
+  year      = {2020},
+  doi       = {10.4230/LIPIcs.SoCG.2020.17},
+  url       = {https://doi.org/10.4230/LIPIcs.SoCG.2020.17}
+}
+
+@article{masoodCGTA2020,
+  author    = {Talha Bin Masood and
+               Tathagata Ray and
+               Vijay Natarajan},
+  title     = {Parallel computation of alpha complexes for biomolecules},
+  journal   = {Computational Geometry},
+  volume    = {90},
+  pages     = {101651},
+  year      = {2020},
+  issn      = {0925-7721},
+  doi       = {https://doi.org/10.1016/j.comgeo.2020.101651},
+  url       = {http://www.sciencedirect.com/science/article/pii/S0925772120300456}
+}
+```
+
+---
+
 ## Acknowledgement
 
 We would like to thank Prof. Sathish Vadhiyar and Nikhil Ranjanikar for helpful discussions and suggestions during the early phase of this work.
@@ -77,5 +116,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Author   : Talha Bin Masood
 
 Contact  : talha [AT] iisc.ac.in
-
-Citation : T. B. Masood, T. Ray and V. Natarajan. "Parallel Computation of Alpha Complex for Biomolecules". https://arxiv.org/abs/1908.05944
