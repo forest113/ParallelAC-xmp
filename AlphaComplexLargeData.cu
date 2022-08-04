@@ -2027,22 +2027,25 @@ int main(int argc, char **argv) {
 	FILE *fp = fopen(argv[2], "w");
 	fprintf(fp, "%d %ld %ld %ld\n", numAtoms, h_final_EdgesV1.size(),
 			h_final_trisV1.size(), h_final_tetV1Index.size());
-
+	
 	for (int i = 0; i < numAtoms; i++) {
 		fprintf(fp, "%9.5lf %9.5lf %9.5lf %9.5lf\n", h_atoms[i].x, h_atoms[i].y,
 				h_atoms[i].z, h_atoms[i].radius);
 	}
 	for (int i = 0; i < h_final_EdgesV1.size(); i++) {
-		fprintf(fp, "%9d %9d\n", h_final_EdgesV1[i], h_final_EdgesV2[i]);
+		fprintf(fp, "%9d %9d\n", h_origAtomIndices[h_final_EdgesV1[i]] - 1, 
+		        h_origAtomIndices[h_final_EdgesV2[i]] - 1);
 	}
 	for (int i = 0; i < h_final_trisV1.size(); i++) {
-		fprintf(fp, "%9d %9d %9d\n", h_final_trisV1[i], h_final_trisV2[i],
-				h_final_trisV3[i]);
+		fprintf(fp, "%9d %9d %9d\n", h_origAtomIndices[h_final_trisV1[i]] - 1, 
+		        h_origAtomIndices[h_final_trisV2[i]] - 1,
+				h_origAtomIndices[h_final_trisV3[i]] - 1);
 	}
 	for (int i = 0; i < h_final_tetV1Index.size(); i++) {
-		fprintf(fp, "%9d %9d %9d %9d\n", h_final_tetV1Index[i],
-				h_final_tetV2Index[i], h_final_tetV3Index[i],
-				h_final_tetV4Index[i]);
+		fprintf(fp, "%9d %9d %9d %9d\n", h_origAtomIndices[h_final_tetV1Index[i]] - 1, 
+		        h_origAtomIndices[h_final_tetV2Index[i]] - 1,
+				h_origAtomIndices[h_final_tetV3Index[i]] - 1, 
+				h_origAtomIndices[h_final_tetV4Index[i]] - 1);
 	}
 
 	h_atoms.clear();

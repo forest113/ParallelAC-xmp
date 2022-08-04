@@ -1706,15 +1706,19 @@ int main(int argc, char **argv) {
 				h_atoms[i].z, h_atoms[i].radius);
 	}
 	for (int i = 0; i < h_finalEdgesV1.size(); i++) {
-		fprintf(fp, "%9d %9d\n", h_finalEdgesV1[i], h_finalEdgesV2[i]);
+		fprintf(fp, "%9d %9d\n", h_origAtomIndices[h_finalEdgesV1[i]] - 1, 
+		        h_origAtomIndices[h_finalEdgesV2[i]] - 1);
 	}
 	for (int i = 0; i < h_finaltrisV1.size(); i++) {
-		fprintf(fp, "%9d %9d %9d\n", h_finaltrisV1[i], h_finaltrisV2[i],
-				h_finaltrisV3[i]);
+		fprintf(fp, "%9d %9d %9d\n", h_origAtomIndices[h_finaltrisV1[i]] - 1, 
+		        h_origAtomIndices[h_finaltrisV2[i]] - 1,
+				h_origAtomIndices[h_finaltrisV3[i]] - 1);
 	}
 	for (int i = 0; i < h_tetV1Index.size(); i++) {
-		fprintf(fp, "%9d %9d %9d %9d\n", h_tetV1Index[i], h_tetV2Index[i],
-				h_tetV3Index[i], h_tetV4Index[i]);
+		fprintf(fp, "%9d %9d %9d %9d\n", h_origAtomIndices[h_tetV1Index[i]] - 1, 
+		        h_origAtomIndices[h_tetV2Index[i]] - 1,
+				h_origAtomIndices[h_tetV3Index[i]] - 1, 
+				h_origAtomIndices[h_tetV4Index[i]] - 1);
 	}
 
 	h_atoms.clear();
