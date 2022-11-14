@@ -1077,6 +1077,7 @@ int main(int argc, char **argv) {
 	float alpha = atof(argv[4]);
 	for (int i = 0; i < numAtoms; i++) {
 		fscanf(input, "%f %f %f %f", &x, &y, &z, &radius);
+		printf("reading this %f %f %f",x,y,z);
 		Atom atom;
 		atom.x = x;
 		atom.y = y;

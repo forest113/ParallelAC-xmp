@@ -41,12 +41,16 @@
 #include <thrust/set_operations.h>
 #include <thrust/merge.h>
 #include <thrust/iterator/constant_iterator.h>
+#include "cgbn/xmp_float.h"
 #include "timer.h"
+
+
 #include "predicates.h"
 #include <iostream>
 
 #define THRES (0.0)
 #define ATHRES (0.0)
+#define ERRCHECKRES (0.1)
 
 #define gpuErrchk(ans) { gpuAssert((ans), __LINE__); }
 
@@ -61,6 +65,20 @@ typedef struct At {
 	float radius;
 	unsigned int index;
 } Atom;
+
+class test{
+    private:
+    int a;
+    
+    public:
+    __host__ __device__ test(int a){
+        this->a = a;
+    }
+    
+    __host__ __device__ int get(){
+        return this->a;
+    }
+};
 
 __global__ void computeCellIndex(Atom *atomList, unsigned int *indexList,
 		unsigned int numAtoms, float3 min, float3 max, int3 gridSize,
@@ -174,9 +192,13 @@ __global__ void markRealEdges(unsigned int *edgeLeftList,
 			+ (a2.radius * a2.radius);
 	d /= 2;
 	float t = (d - a * a1.x - b * a1.y - c * a1.z);
-	float currentDist = ((t * t) / (a * a + b * b + c * c))
-			- (a1.radius * a1.radius);
-	if (currentDist <= (alpha + ATHRES)) {
+	/*to avoid division, we multiply all terms by (a * a + b * b + c * c)
+	 * Intead of using the actual distance as shows below, we use the distance multiplied by the factor.
+	float currentDist = ((t * t) / (a * a + b * b + c * c)) 
+			- (a1.radius * a1.radius); */
+	float currentDistTerm = ((t * t)) 
+			- (a1.radius * a1.radius)*(a * a + b * b + c * c); 
+	if (currentDistTerm <= (alpha + ATHRES)*(a * a + b * b + c * c)) {
 		edgeMarkList[i] = true;
 	} else {
 		edgeMarkList[i] = false;
@@ -263,9 +285,9 @@ __global__ void fillPossibleTriangles(unsigned int *edgeLeftIndexList,
 
 __global__ void markRealTriangles(unsigned int *triV1IndexList,
 		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
-		bool *triMarkList, float4 *orthoSphereList, Atom *atomList,
+		bool *triMarkList, bool *triPreciseCheckList, float4 *orthoSphereList, Atom *atomList,
 		int numAtoms, int numTris, float alpha) {
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	int i = (blockIdx.x * blockDim.x + threadIdx.x);
 	if (i >= numTris)
 		return;
 	int v1 = triV1IndexList[i];
@@ -281,7 +303,8 @@ __global__ void markRealTriangles(unsigned int *triV1IndexList,
 	float b1 = (a1.x * a1.x - a2.x * a2.x) + (a1.y * a1.y - a2.y * a2.y)
 			+ (a1.z * a1.z - a2.z * a2.z) - (a1.radius * a1.radius)
 			+ (a2.radius * a2.radius);
-	b1 /= 2;
+	
+	//b1 /= 2; avoid division for now
 	// Find equation of plane of intersection of atoms a2 and a3
 	float a21 = a2.x - a3.x;
 	float a22 = a2.y - a3.y;
@@ -289,12 +312,12 @@ __global__ void markRealTriangles(unsigned int *triV1IndexList,
 	float b2 = (a2.x * a2.x - a3.x * a3.x) + (a2.y * a2.y - a3.y * a3.y)
 			+ (a2.z * a2.z - a3.z * a3.z) - (a2.radius * a2.radius)
 			+ (a3.radius * a3.radius);
-	b2 /= 2;
+	//b2 /= 2; avoid division for now
 	// Find equation of plane containing centers of atoms a1, a2 and a3
 	float a31 = (a2.y - a1.y) * (a3.z - a1.z) - (a3.y - a1.y) * (a2.z - a1.z);
 	float a32 = (a2.z - a1.z) * (a3.x - a1.x) - (a3.z - a1.z) * (a2.x - a1.x);
 	float a33 = (a2.x - a1.x) * (a3.y - a1.y) - (a3.x - a1.x) * (a2.y - a1.y);
-	float b3 = a31 * a1.x + a32 * a1.y + a33 * a1.z;
+	float b3 = a31 * a1.x + a32 * a1.y + a33 * a1.z * 2; //extra factor of 2 to avoid division of b1 and b2
 	// Use Cramer's rule to find intersection point of these three planes
 	float D = a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
 			- a13 * a22 * a31 - a12 * a21 * a33 - a11 * a23 * a32;
@@ -304,14 +327,101 @@ __global__ void markRealTriangles(unsigned int *triV1IndexList,
 			- b1 * a21 * a33 - a11 * a23 * b3;
 	float Dz = a11 * a22 * b3 + a12 * b2 * a31 + b1 * a21 * a32 - b1 * a22 * a31
 			- a12 * a21 * b3 - a11 * b2 * a32;
-	float X = Dx / D;
-	float Y = Dy / D;
-	float Z = Dz / D;
-	float dist = (a1.x - X) * (a1.x - X) + (a1.y - Y) * (a1.y - Y)
-			+ (a1.z - Z) * (a1.z - Z) - a1.radius * a1.radius;
+	/* avoid disivion by D for now, divide later while storing orthosphere */
+	D = D*2;
+	float X = Dx; // / D; 
+	float Y = Dy; // / D;
+	float Z = Dz; // / D;
+	float dist = (a1.x*D - X) * (a1.x*D - X) + (a1.y*D - Y) * (a1.y*D - Y)
+			+ (a1.z*D - Z) * (a1.z*D - Z) - a1.radius * a1.radius*D*D;
+    triMarkList[i] = (dist <= (alpha + ATHRES)*D*D);
+    bool sign = (dist - (alpha + ATHRES)*D*D) < 0;
+    triPreciseCheckList[i] = (((dist - (alpha + ATHRES)*D*D) < ERRCHECKRES && !sign) || (((alpha + ATHRES)*D*D - dist) > ERRCHECKRES && sign));
+    printf("bool:%d", triPreciseCheckList[i]);
+    /* Do division now. */
+    X = X/D;
+    Y = Y/D;
+    Z = Z/D;
+    dist = dist/(D*D);
 	orthoSphereList[i] = make_float4(X, Y, Z, dist);
-	triMarkList[i] = (dist <= (alpha + ATHRES));
+
 }
+
+
+__global__ void markRealTrianglesPrecise(unsigned int *triV1IndexList,
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,bool *triMarkList,unsigned int *triPreciseCheckIndexList, float4 *orthoSphereList, Atom *atomList,
+		int numAtoms, int numTris, float alpha, int numReqPreciseCheck ) {
+	int j = (blockIdx.x * blockDim.x + threadIdx.x)/2;
+	if (j >= numReqPreciseCheck){
+	    printf("return ");
+		return;
+    }
+	int i = triPreciseCheckIndexList[j];
+	if (i >= numTris){
+	    printf("return ");
+		return;
+    }
+    else{
+        printf("no return ,i:%d blovvkid:%d dim:%d, thread:%d",i, blockIdx.x, blockDim.x,threadIdx.x);
+    }
+	int v1 = triV1IndexList[i];
+	int v2 = triV2IndexList[i];
+	int v3 = triV3IndexList[i];
+	Atom a1 = atomList[v1];
+	Atom a2 = atomList[v2];
+	Atom a3 = atomList[v3];
+	MP_float *A = new MP_float(10);
+	MP_float *B = new MP_float(20);
+	MP_float *sum = new MP_float(0);
+	//test anInt(2);
+	*sum = *A + *B + (*A * *B);
+	printf("PHEW xmp test result:%f %f %f ,",sum->get_float(), A->get_float(), B->get_float() );
+	// Find equation of plane of intersection of atoms a1 and a2
+	MP_float a1x(a1.x), a1y(a1.y), a1z(a1.z), a2x(a2.x), a2y(a2.y), a2z(a2.z), a3x(a3.x), a3y(a3.y), a3z(a3.z), a1rad(a1.radius), a2rad(a2.radius), a3rad(a3.radius); 
+	MP_float a11(0);
+	a11 = a1x - a2x;
+	MP_float a12 = a1y - a2y;
+	MP_float a13 = a1z - a2z;
+MP_float b1 = (a1x * a1x - a2x * a2x) + (a1y * a1y - a2y * a2y)
+			+ (a1z * a1z - a2z * a2z) - (a1rad * a1rad)
+			+ (a2rad * a2rad);
+//b1 /= 2; avoid division for now
+	// Find equation of plane of intersection of atoms a2 and a3
+	MP_float a21 = a2x - a3x;
+	MP_float a22 = a2y - a3y;
+	MP_float a23 = a2z - a3z;
+	MP_float b2 = (a2x * a2x - a3x * a3x) + (a2y * a2y - a3y * a3y)
+			+ (a2z * a2z - a3z * a3z) - (a2rad * a2rad)
+			+ (a3rad * a3rad);
+	//b2 /= 2; avoid division for now
+	// Find equation of plane containing centers of atoms a1, a2 and a3
+	MP_float a31 = (a2y - a1y) * (a3z - a1z) - (a3y - a1y) * (a2z - a1z);
+	MP_float a32 = (a2z - a1z) * (a3x - a1x) - (a3z - a1z) * (a2x - a1x);
+	MP_float a33 = (a2x - a1x) * (a3y - a1y) - (a3x - a1x) * (a2y - a1y);
+	MP_float b3 = a31 * a1x + a32 * a1y + a33 * a1z * 2; //extra factor of 2 to avoid division of b1 and b2
+// Use Cramer's rule to find intersection point of these three planes
+	MP_float D = a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
+			- a13 * a22 * a31 - a12 * a21 * a33 - a11 * a23 * a32;
+	MP_float Dx = b1 * a22 * a33 + a12 * a23 * b3 + a13 * b2 * a32 - a13 * a22 * b3
+			- a12 * b2 * a33 - b1 * a23 * a32;
+	MP_float Dy = a11 * b2 * a33 + b1 * a23 * a31 + a13 * a21 * b3 - a13 * b2 * a31
+			- b1 * a21 * a33 - a11 * a23 * b3;
+	MP_float Dz = a11 * a22 * b3 + a12 * b2 * a31 + b1 * a21 * a32 - b1 * a22 * a31
+			- a12 * a21 * b3 - a11 * b2 * a32;
+	/* avoid disivion by D  */
+	D = D*2;
+	MP_float X = Dx; // / D; 
+	MP_float Y = Dy; // / D;
+	MP_float Z = Dz; // / D;
+	MP_float dist = (a1x*D - X) * (a1x*D - X) + (a1y*D - Y) * (a1y*D - Y)
+			+ (a1z*D - Z) * (a1z*D - Z) - a1rad * a1rad*D*D;
+    triMarkList[i] = (dist <= (MP_float(alpha + ATHRES)*D*D));
+	printf("test2:%f",dist.get_float());
+	
+	
+	
+	
+} 
 
 __global__ void computePossibleTetCount(unsigned int *triV1IndexList,
 		unsigned int *triV2IndexList, unsigned int *triV3IndexList,
@@ -1009,7 +1119,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	fclose(input);
-	printf("Successfully read the file %s ...\n", argv[1]);
+	printf("Successfully read the file******* %s ...\n", argv[1]);
 	printf(
 			"The given file has %d atoms. \n\nStarting alpha complex computation for "
 					"alpha = %.3f and solvent radius = %.3f ...\n\n", numAtoms,
@@ -1191,20 +1301,52 @@ int main(int argc, char **argv) {
 	thrust::device_vector<unsigned int> d_triV2Index(numTris, 0u);
 	thrust::device_vector<unsigned int> d_triV3Index(numTris, 0u);
 	thrust::device_vector<bool> d_triMarkList(numTris, false);
+	thrust::device_vector<bool> d_triPreciseCheckList(numTris, false);
 	thrust::device_vector<float4> d_p1List(numTris);
 	unsigned int *d_triV1Index_ptr = thrust::raw_pointer_cast(&d_triV1Index[0]);
 	unsigned int *d_triV2Index_ptr = thrust::raw_pointer_cast(&d_triV2Index[0]);
 	unsigned int *d_triV3Index_ptr = thrust::raw_pointer_cast(&d_triV3Index[0]);
 	bool *d_triMarkList_ptr = thrust::raw_pointer_cast(&d_triMarkList[0]);
+	bool *d_triPreciseCheckList_ptr = thrust::raw_pointer_cast(&d_triPreciseCheckList[0]);
 	float4 *d_p1List_ptr = thrust::raw_pointer_cast(&d_p1List[0]);
 	fillPossibleTriangles<<<blocks, threads>>>(d_edgeLeftIndex_ptr,
 			d_edgeRightIndex_ptr, d_edge_beginIndex_ptr, d_edge_endIndex_ptr,
 			numAtoms, d_triV1Index_ptr, d_triV2Index_ptr, d_triV3Index_ptr,
 			d_possibleTriCount_ptr);
+	
 	blocks = dim3(numTris / THREADS + 1, 1, 1);
 	markRealTriangles<<<blocks, threads>>>(d_triV1Index_ptr, d_triV2Index_ptr,
-			d_triV3Index_ptr, d_triMarkList_ptr, d_p1List_ptr, d_atomList_ptr,
+			d_triV3Index_ptr, d_triMarkList_ptr, d_triPreciseCheckList_ptr, d_p1List_ptr, d_atomList_ptr,
 			numAtoms, numTris, alpha);
+	gpuErrchk(cudaPeekAtLastError());
+	thrust::host_vector<bool> h_triPreciseCheckList = d_triPreciseCheckList;
+	
+	int numReqPreciseCheck = 0;
+	for(int i=0; i<numTris; i++){
+	    if(h_triPreciseCheckList[i]){
+	        numReqPreciseCheck ++;
+	    }
+	}
+	printf("hi, numPrecise:%d",numReqPreciseCheck);
+	thrust::host_vector<unsigned int> h_triPreciseCheckIndexList(numReqPreciseCheck, 0u);
+	
+	int preciseCheckListLen = 0;
+	for(int i=0; i<numTris; i++){
+	    if(h_triPreciseCheckList[i]){
+	        h_triPreciseCheckIndexList[preciseCheckListLen] = i;
+	    }
+	}
+	thrust::device_vector<unsigned int> d_triPreciseCheckIndexList = h_triPreciseCheckIndexList;
+	unsigned int *d_triPreciseCheckIndexList_ptr = thrust::raw_pointer_cast(&d_triPreciseCheckIndexList[0]);
+	blocks = dim3(numReqPreciseCheck/ 256 , 1, 1);
+	threads = dim3(512, 1, 1);
+	printf("***********calling:************%d\n",numReqPreciseCheck);
+	markRealTrianglesPrecise<<<blocks, threads>>>(d_triV1Index_ptr, d_triV2Index_ptr,
+			d_triV3Index_ptr, d_triMarkList_ptr, d_triPreciseCheckIndexList_ptr, d_p1List_ptr, d_atomList_ptr,
+			numAtoms, numTris, alpha, numReqPreciseCheck); 
+	gpuErrchk(cudaPeekAtLastError());
+    printf("here");
+	threads = dim3(THREADS, 1, 1);
 	// Make zip_iterator easy to use
 	typedef thrust::device_vector<float4>::iterator F4DIter;
 	typedef thrust::tuple<BoolDIter, UIntDIter, UIntDIter, UIntDIter, F4DIter> BoolInt3DIterTuple;

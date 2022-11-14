@@ -1,0 +1,4 @@
+/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/parallelac.dir
+/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/parallelac-largeData.dir
+/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/edit_cache.dir
+/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/rebuild_cache.dir

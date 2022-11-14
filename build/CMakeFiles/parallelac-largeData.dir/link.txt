@@ -1,0 +1,1 @@
+/usr/bin/c++ -rdynamic CMakeFiles/cuda_compile_2.dir/cuda_compile_2_generated_AlphaComplexLargeData.cu.o -o parallelac-largeData  /usr/local/cuda/lib64/libcudart_static.a -ldl -lrt -lpthread 
