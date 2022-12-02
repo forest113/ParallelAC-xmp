@@ -2,12 +2,13 @@
 #include <iostream>
 #include <cuda.h>
 #include <gmp.h>
+#include <cmath>
 #include "cgbn.h"
 #include <inttypes.h>
 
 
-#define TPI 2
-#define BITS 64
+#define TPI 4
+#define BITS 512
 
 typedef cgbn_context_t<TPI>         context_t;
 typedef cgbn_env_t<context_t, BITS> env_t;
@@ -15,14 +16,15 @@ typedef cgbn_env_t<context_t, BITS> env_t;
 class MP_float {
    private:
       cgbn_mem_t<BITS> num;
-      cgbn_mem_t<BITS> denom;
-      cgbn_error_report_t *report;
+      //cgbn_mem_t<BITS> denom;
+      unsigned int denom; 
+      //char padding[20];
 
    public:   
       __host__ __device__ MP_float(float a) {
           for(int i=0; i<(BITS+31)/32; i++){
               this->num._limbs[i] = 0;
-              this->denom._limbs[i] = 0;
+              //this->denom._limbs[i] = 0;
           }
           int sign = 0;
           uint32_t value = 0;
@@ -34,11 +36,11 @@ class MP_float {
 
           int temp_int = temp;
           float mod = temp - temp_int;
-          while(mod > 0){
+          while(fabs(mod) > 0){
               temp *= 10;
               temp_int = temp;
               mod = temp - temp_int;
-              exp *= 10;
+              exp += 1;
           }
           if(sign){
               value = -temp;
@@ -46,13 +48,15 @@ class MP_float {
           else{
               value = temp;
           }
-          context_t bn_context(cgbn_report_monitor, this->report, 1);                                 // create a CGBN context
+          cgbn_error_report_t *report;
+          context_t bn_context(cgbn_report_monitor, report, 1);                                 // create a CGBN context
           env_t bn_env(bn_context); 
-          env_t::cgbn_t numerator, denom, num_float;
+          env_t::cgbn_t numerator, num_float;
           env_t::cgbn_t num_float_signed;
           cgbn_set_ui32(bn_env, num_float, 1);
           cgbn_set_ui32(bn_env, numerator, value);
-          cgbn_set_ui32(bn_env, denom, exp);
+          //cgbn_set_ui32(bn_env, denom, exp);
+          this->denom = exp;
           //printf("*********num:%d,denom:%d\n",cgbn_get_ui32(bn_env, numerator),cgbn_get_ui32(bn_env,denom));
           //bn_env.div(num_float, numerator, denom);
           if(sign){
@@ -64,113 +68,136 @@ class MP_float {
           else{
               cgbn_store(bn_env, &(this->num), numerator);
           }
-          cgbn_store(bn_env, &(this->denom), denom);
+          //cgbn_store(bn_env, &(this->denom), denom);
       }
       
       __host__ __device__ MP_float(const MP_float &a){
           this->num = a.num;
           this->denom = a.denom;
-          this->report = a.report;
+          //this->report = a.report;
       }
       
       __host__ __device__ MP_float operator+ (MP_float num1) {
           MP_float result(0.0);
-          context_t bn_context(cgbn_report_monitor, this->report, 0);                                 // create a CGBN context
+          cgbn_error_report_t *report;
+          context_t bn_context(cgbn_report_monitor, report, 0);                                 // create a CGBN context
           env_t bn_env(bn_context);                       // construct a bn environment for 1024 bit math
-          env_t::cgbn_t a,a_denom, b, b_denom, r, const_10;
+          env_t::cgbn_t a, b, r, const_10;
           cgbn_set_ui32(bn_env, const_10, 10);
           bn_env.load(a, &(this->num));
-          bn_env.load(a_denom, &(this->denom));
+          //bn_env.load(a_denom, &(this->denom));
 
           bn_env.load(b, &(num1.num));
-          bn_env.load(b_denom, &(num1.denom));
+          //bn_env.load(b_denom, &(num1.denom));
           
-          int a_denom_greater = bn_env.compare(a_denom, b_denom);
-          while(bn_env.compare(a_denom, b_denom) != 0){
+          int a_denom_greater = (this->denom>num1.denom);
+          while(this->denom != num1.denom){
               //printf("hi");
-              if(a_denom_greater == 1){
-                  bn_env.mul(b_denom, b_denom, const_10);
+              if(a_denom_greater){
+                  //bn_env.mul(b_denom, b_denom, const_10);
+                  num1.denom += 1;
                   bn_env.mul(b, b, const_10);
               }
               else{
-                  bn_env.mul(a_denom, a_denom, const_10);
+                  //bn_env.mul(a_denom, a_denom, const_10);
+                  this->denom += 1;
                   bn_env.mul(a, a, const_10);
               }
           }
           
           bn_env.add(r, a, b);
           bn_env.store((&result.num), r);
-          bn_env.store((&result.denom), b_denom);
+          result.denom = num1.denom;
+          //bn_env.store((&result.denom), b_denom);
 
           return result;
       }
       
       __host__ __device__ MP_float operator- (MP_float num1) {
           MP_float result(0.0);
-          context_t bn_context(cgbn_report_monitor, this->report, 0);                                 // create a CGBN context
+          cgbn_error_report_t *report;
+          context_t bn_context(cgbn_report_monitor, report, 0);                                 // create a CGBN context
           env_t bn_env(bn_context);                       // construct a bn environment for 1024 bit math
-          env_t::cgbn_t a,a_denom, b, b_denom, r, const_10;
+          env_t::cgbn_t a, b, r, const_10;
           cgbn_set_ui32(bn_env, const_10, 10);
           bn_env.load(a, &(this->num));
-          bn_env.load(a_denom, &(this->denom));
+          //bn_env.load(a_denom, &(this->denom));
 
           bn_env.load(b, &(num1.num));
-          bn_env.load(b_denom, &(num1.denom));
+          //bn_env.load(b_denom, &(num1.denom));
           
-          int a_denom_greater = bn_env.compare(a_denom, b_denom);
-          while(bn_env.compare(a_denom, b_denom) != 0){
-              if(a_denom_greater){
-                  bn_env.mul(b_denom, b_denom, const_10);
+          int a_denom_greater = (this->denom>num1.denom);
+          while(this->denom != num1.denom){
+              //printf("hi");
+              if(a_denom_greater == 1){
+                  //bn_env.mul(b_denom, b_denom, const_10);
+                  num1.denom += 1;
                   bn_env.mul(b, b, const_10);
               }
               else{
-                  bn_env.mul(a_denom, a_denom, const_10);
+                  //bn_env.mul(a_denom, a_denom, const_10);
+                  this->denom += 1;
                   bn_env.mul(a, a, const_10);
               }
           }
           
           bn_env.sub(r, a, b);
           bn_env.store((&result.num), r);
-          bn_env.store((&result.denom), b_denom);
+          result.denom = num1.denom;
+         // bn_env.store((&result.denom), b_denom);
 
           return result;
       }
       
       __host__ __device__ MP_float operator* (MP_float num1) {
           MP_float result(0.0);
-          context_t bn_context(cgbn_report_monitor, this->report, 0);                                 // create a CGBN context
+          cgbn_error_report_t *report;
+          context_t bn_context(cgbn_report_monitor, report, 0);                                 // create a CGBN context
           env_t bn_env(bn_context);                       // construct a bn environment for 1024 bit math
-          env_t::cgbn_t a,a_denom, b, b_denom, r, r_denom, const_10;
+          env_t::cgbn_t a, b, r, const_10;
+
           cgbn_set_ui32(bn_env, const_10, 10);
           bn_env.load(a, &(this->num));
-          bn_env.load(a_denom, &(this->denom));
+          //bn_env.load(a_denom, &(this->denom));
 
           bn_env.load(b, &(num1.num));
-          bn_env.load(b_denom, &(num1.denom));
+          //bn_env.load(b_denom, &(num1.denom));
           
           bn_env.mul(r, a, b);
-          bn_env.mul(r_denom, a_denom, b_denom);
+          result.denom = this->denom + num1.denom;
           bn_env.store((&result.num), r);
-          bn_env.store((&result.denom), r_denom);
+          //bn_env.store((&result.denom), r_denom);
 
           return result;
       }
       
        __host__ __device__ bool operator<= (MP_float num1) {
           MP_float result(0.0);
-          context_t bn_context(cgbn_report_monitor, this->report, 0);                                 // create a CGBN context
+          cgbn_error_report_t *report;
+          context_t bn_context(cgbn_report_monitor, report, 0);                                 // create a CGBN context
           env_t bn_env(bn_context);                       // construct a bn environment for 1024 bit math
-          env_t::cgbn_t a,a_denom, b, b_denom, A, B;
+          env_t::cgbn_t a, b, const_10;
+          unsigned int denom_diff = fabs(this->denom-num1.denom);
+          cgbn_set_ui32(bn_env, const_10, 10);
           bn_env.load(a, &(this->num));
-          bn_env.load(a_denom, &(this->denom));
+          //bn_env.load(a_denom, &(this->denom));
 
           bn_env.load(b, &(num1.num));
-          bn_env.load(b_denom, &(num1.denom));
+          //bn_env.load(b_denom, &(num1.denom));
+          if(this->denom>num1.denom){
+              for(int i=0; i<denom_diff; i++){
+                  bn_env.div(a, a, const_10);
+              }
+          }
+          else{
+              for(int i=0; i<denom_diff; i++){
+                  bn_env.div(b, b, const_10);
+              }
+          }
           
-          bn_env.mul(A, a, b_denom);
-          bn_env.mul(B, b, a_denom);
+         
           
-          bool res = bn_env.compare(B, A);
+          bool res = bn_env.compare(b, a);
           if(res>0){
               return true;
           }   
@@ -182,29 +209,48 @@ class MP_float {
       }
       
       __host__ __device__ double get_float(){
-          context_t bn_context(cgbn_report_monitor, this->report, 0);                                 // create a CGBN context
+          cgbn_error_report_t *report;
+          context_t bn_context(cgbn_report_monitor, report, 0);                                 // create a CGBN context
           env_t bn_env(bn_context);                       // construct a bn environment for 1024 bit math
-          env_t::cgbn_t double_num, double_denom, const_10;
+          env_t::cgbn_t double_num, double_num_unsigned, const_10, const_0;
           cgbn_set_ui32(bn_env, const_10, 10);
+          cgbn_set_ui32(bn_env, const_10, 0);
           
-          while((this->num._limbs[1]!=0 && (int)this->num._limbs[1]!=-1) && (this->denom._limbs[2]>0)){
+          int sign = 0;
+          bn_env.load(double_num, &(this->num));
+          bn_env.load(double_num_unsigned, &(this->num));
+          //bn_env.load(double_denom, &(this->denom));
+          if(bn_env.compare(double_num, const_0)>0){
+              sign = 1;
+              bn_env.negate(double_num_unsigned,double_num);
+              printf("negating");
+          }
+          bn_env.store(&(this->num), double_num_unsigned);
+          //bn_env.store(&(this->denom), double_denom);
+          while((this->num._limbs[1]!=0 && (int)this->num._limbs[1]!=-1)){
               bn_env.load(double_num, &(this->num));
-              bn_env.load(double_denom, &(this->denom));
+              //bn_env.load(double_denom, &(this->denom));
 
               bn_env.div(double_num, double_num, const_10);
-              bn_env.div(double_denom, double_denom, const_10);
+              //bn_env.div(double_denom, double_denom, const_10);
+              this->denom --;
               bn_env.store(&(this->num), double_num);
-              bn_env.store(&(this->denom), double_denom);
+              //bn_env.store(&(this->denom), double_denom);
+              //printf("get double whileee: %d, %d, ",num._limbs[1], denom._limbs[2]);
           }
-          uint64_t num = 0;
-          num += this->num._limbs[1];
-          num = num>>32;
+          uint32_t num = 0;
+          //num += this->num._limbs[1];
+          //num = num>>32;
           num += this->num._limbs[0];
-          uint64_t denom = 0;
-          denom += this->denom._limbs[1];
-          denom = denom>>32;
-          denom += this->denom._limbs[0];
-          double result = (long double) num/(long double) denom;
+          uint32_t denom = 0;
+          //denom += this->denom._limbs[1];
+          //denom = denom>>32;
+          denom += this->denom;
+          double result = (double)num/(double)denom;
+          if(sign == 1){
+              result = -result;
+          }
+          printf("get double: %d, %d, %f",num, denom, result);
           return result;
 
       }

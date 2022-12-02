@@ -337,7 +337,6 @@ __device__ __forceinline__ uint32_t cgbn_env_t<context_t, bits, syncable>::gcd_u
 /* bn arithmetic routines */
 template<class context_t, uint32_t bits, cgbn_syncable_t syncable>
 __device__ __forceinline__ int32_t cgbn_env_t<context_t, bits, syncable>::add(cgbn_t &r, const cgbn_t &a, const cgbn_t &b) const {
-  printf("using gpu");
   return cgbn::core_t<cgbn_env_t>::add(r._limbs, a._limbs, b._limbs);
 }
 

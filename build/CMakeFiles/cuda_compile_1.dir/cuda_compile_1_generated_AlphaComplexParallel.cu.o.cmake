@@ -57,12 +57,12 @@ if(NOT generated_file)
 endif()
 
 # Set these up as variables to make reading the generated file easier
-set(CMAKE_COMMAND "/usr/local/lib/python3.7/dist-packages/cmake/data/bin/cmake") # path
+set(CMAKE_COMMAND "/usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake") # path
 set(source_file "/content/gdrive/MyDrive/Colab Notebooks/parallelac/AlphaComplexParallel.cu") # path
 set(NVCC_generated_dependency_file "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//cuda_compile_1_generated_AlphaComplexParallel.cu.o.NVCC-depend") # path
 set(cmake_dependency_file "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//cuda_compile_1_generated_AlphaComplexParallel.cu.o.depend") # path
-set(CUDA_make2cmake "/usr/local/lib/python3.7/dist-packages/cmake/data/share/cmake-3.22/Modules/FindCUDA/make2cmake.cmake") # path
-set(CUDA_parse_cubin "/usr/local/lib/python3.7/dist-packages/cmake/data/share/cmake-3.22/Modules/FindCUDA/parse_cubin.cmake") # path
+set(CUDA_make2cmake "/usr/local/lib/python3.8/dist-packages/cmake/data/share/cmake-3.22/Modules/FindCUDA/make2cmake.cmake") # path
+set(CUDA_parse_cubin "/usr/local/lib/python3.8/dist-packages/cmake/data/share/cmake-3.22/Modules/FindCUDA/parse_cubin.cmake") # path
 set(build_cubin OFF) # bool
 set(CUDA_HOST_COMPILER "/usr/bin/cc") # path
 # We won't actually use these variables for now, but we need to set this, in

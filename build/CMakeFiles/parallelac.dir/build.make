@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /usr/local/lib/python3.7/dist-packages/cmake/data/bin/cmake
+CMAKE_COMMAND = /usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake
 
 # The command to remove a file.
-RM = /usr/local/lib/python3.7/dist-packages/cmake/data/bin/cmake -E rm -f
+RM = /usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -970,8 +970,8 @@ CMakeFiles/cuda_compile_1.dir/cuda_compile_1_generated_AlphaComplexParallel.cu.o
 CMakeFiles/cuda_compile_1.dir/cuda_compile_1_generated_AlphaComplexParallel.cu.o: CMakeFiles/cuda_compile_1.dir/cuda_compile_1_generated_AlphaComplexParallel.cu.o.cmake
 CMakeFiles/cuda_compile_1.dir/cuda_compile_1_generated_AlphaComplexParallel.cu.o: ../AlphaComplexParallel.cu
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir="/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building NVCC (Device) object CMakeFiles/cuda_compile_1.dir/cuda_compile_1_generated_AlphaComplexParallel.cu.o"
-	cd "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir" && /usr/local/lib/python3.7/dist-packages/cmake/data/bin/cmake -E make_directory "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//."
-	cd "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir" && /usr/local/lib/python3.7/dist-packages/cmake/data/bin/cmake -D verbose:BOOL=$(VERBOSE) -D build_configuration:STRING= -D "generated_file:STRING=/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//./cuda_compile_1_generated_AlphaComplexParallel.cu.o" -D "generated_cubin_file:STRING=/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//./cuda_compile_1_generated_AlphaComplexParallel.cu.o.cubin.txt" -P "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//cuda_compile_1_generated_AlphaComplexParallel.cu.o.cmake"
+	cd "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir" && /usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake -E make_directory "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//."
+	cd "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir" && /usr/local/lib/python3.8/dist-packages/cmake/data/bin/cmake -D verbose:BOOL=$(VERBOSE) -D build_configuration:STRING= -D "generated_file:STRING=/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//./cuda_compile_1_generated_AlphaComplexParallel.cu.o" -D "generated_cubin_file:STRING=/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//./cuda_compile_1_generated_AlphaComplexParallel.cu.o.cubin.txt" -P "/content/gdrive/MyDrive/Colab Notebooks/parallelac/build/CMakeFiles/cuda_compile_1.dir//cuda_compile_1_generated_AlphaComplexParallel.cu.o.cmake"
 
 # Object files for target parallelac
 parallelac_OBJECTS =
