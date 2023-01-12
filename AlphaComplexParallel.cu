@@ -41,7 +41,9 @@
 #include <thrust/set_operations.h>
 #include <thrust/merge.h>
 #include <thrust/iterator/constant_iterator.h>
-#include "cgbn/xmp_float.h"
+/* include cgbn for xmp multiprecision and int_float for integer precision arithmatic. */
+//#include "cgbn/xmp_float.h"
+#include "int_float.h"
 #include "timer.h"
 
 
@@ -50,7 +52,7 @@
 
 #define THRES (0.0)
 #define ATHRES (0.0)
-#define ERRCHECKRES (0.1)
+#define ERRCHECKRES (0.01)
 
 #define gpuErrchk(ans) { gpuAssert((ans), __LINE__); }
 
@@ -60,49 +62,125 @@ inline void gpuAssert(cudaError_t code, int line) {
 	}
 }
 
+//re-writing inSphere_w function from predicates.h using different precision methods
+// Absolute() define is used only in the insphere_w function.
+#define Absolute1(a)  ((a) <= 0.0 ? -(a) : (a))
+__device__ float insphere_w_precise(float *pa, float *pb, float *pc, float *pd, float *pe,
+		float wa, float wb, float wc, float wd, float we) {
+	MP_float aex, bex, cex, dex;
+	MP_float aey, bey, cey, dey;
+	MP_float aez, bez, cez, dez;
+	MP_float aew, bew, cew, dew;
+	MP_float aexbey, bexaey, bexcey, cexbey, cexdey, dexcey, dexaey, aexdey;
+	MP_float aexcey, cexaey, bexdey, dexbey;
+	MP_float alift, blift, clift, dlift;
+	MP_float alw, blw, clw, dlw;
+	MP_float ab, bc, cd, da, ac, bd;
+	MP_float abc, bcd, cda, dab;
+	MP_float aezplus, bezplus, cezplus, dezplus;
+	MP_float aewplus, bewplus, cewplus, dewplus;
+	MP_float aexbeyplus, bexaeyplus, bexceyplus, cexbeyplus;
+	MP_float cexdeyplus, dexceyplus, dexaeyplus, aexdeyplus;
+	MP_float aexceyplus, cexaeyplus, bexdeyplus, dexbeyplus;
+	MP_float det;
+	MP_float permanent, errbound;
+
+	aex = MP_float(pa[0] - pe[0]);
+	bex = MP_float(pb[0] - pe[0]);
+	cex = MP_float(pc[0] - pe[0]);
+	dex = MP_float(pd[0] - pe[0]);
+	aey = MP_float(pa[1] - pe[1]);
+	bey = MP_float(pb[1] - pe[1]);
+	cey = MP_float(pc[1] - pe[1]);
+	dey = MP_float(pd[1] - pe[1]);
+	aez = MP_float(pa[2] - pe[2]);
+	bez = MP_float(pb[2] - pe[2]);
+	cez = MP_float(pc[2] - pe[2]);
+	dez = MP_float(pd[2] - pe[2]);
+	aew = wa - we;
+	bew = wb - we;
+	cew = wc - we;
+	dew = wd - we;
+
+	aexbey = aex * bey;
+	bexaey = bex * aey;
+	ab = aexbey - bexaey;
+	bexcey = bex * cey;
+	cexbey = cex * bey;
+	bc = bexcey - cexbey;
+	cexdey = cex * dey;
+	dexcey = dex * cey;
+	cd = cexdey - dexcey;
+	dexaey = dex * aey;
+	aexdey = aex * dey;
+	da = dexaey - aexdey;
+
+	aexcey = aex * cey;
+	cexaey = cex * aey;
+	ac = aexcey - cexaey;
+	bexdey = bex * dey;
+	dexbey = dex * bey;
+	bd = bexdey - dexbey;
+
+	abc = aez * bc - bez * ac + cez * ab;
+	bcd = bez * cd - cez * bd + dez * bc;
+	cda = cez * da + dez * ac + aez * cd;
+	dab = dez * ab + aez * bd + bez * da;
+
+	alift = aex * aex + aey * aey + aez * aez;
+	blift = bex * bex + bey * bey + bez * bez;
+	clift = cex * cex + cey * cey + cez * cez;
+	dlift = dex * dex + dey * dey + dez * dez;
+
+	alw = alift - aew;
+	blw = blift - bew;
+	clw = clift - cew;
+	dlw = dlift - dew;
+
+	det = (dlw * abc - clw * dab) + (blw * cda - alw * bcd);
+
+	aezplus = Absolute1(aez);
+	bezplus = Absolute1(bez);
+	cezplus = Absolute1(cez);
+	dezplus = Absolute1(dez);
+	aewplus = Absolute1(aew);
+	bewplus = Absolute1(bew);
+	cewplus = Absolute1(cew);
+	dewplus = Absolute1(dew);
+	aexbeyplus = Absolute1(aexbey);
+	bexaeyplus = Absolute1(bexaey);
+	bexceyplus = Absolute1(cexbey);
+	cexdeyplus = Absolute1(cexdey);
+	dexceyplus = Absolute1(dexcey);
+	dexaeyplus = Absolute1(dexaey);
+	aexdeyplus = Absolute1(aexdey);
+	aexceyplus = Absolute1(aexcey);
+	cexaeyplus = Absolute1(cexaey);
+	bexdeyplus = Absolute1(bexdey);
+	dexbeyplus = Absolute1(dexbey);
+	permanent = ((cexdeyplus + dexceyplus) * bezplus
+			+ (dexbeyplus + bexdeyplus) * cezplus
+			+ (bexceyplus + cexbeyplus) * dezplus) * (alift + aewplus)
+			+ ((dexaeyplus + aexdeyplus) * cezplus
+					+ (aexceyplus + cexaeyplus) * dezplus
+					+ (cexdeyplus + dexceyplus) * aezplus) * (blift + bewplus)
+			+ ((aexbeyplus + bexaeyplus) * dezplus
+					+ (bexdeyplus + dexbeyplus) * aezplus
+					+ (dexaeyplus + aexdeyplus) * bezplus) * (clift + cewplus)
+			+ ((bexceyplus + cexbeyplus) * aezplus
+					+ (cexaeyplus + aexceyplus) * bezplus
+					+ (aexbeyplus + bexaeyplus) * cezplus) * (dlift + dewplus);
+
+	//return insphereexact_w(pa, pb, pc, pd, pe, wa, wb, wc, wd, we);
+	return det.get_float();
+}
+
 typedef struct At {
 	float x, y, z;
 	float radius;
 	unsigned int index;
 } Atom;
 
-class test{
-    private:
-    int a;
-    
-    public:
-    __host__ __device__ test(int a){
-        this->a = a;
-    }
-    
-    __host__ __device__ int get(){
-        return this->a;
-    }
-};
-
-__global__ void xmp_add(MP_float *operand1, MP_float *operand2, MP_float *result, unsigned int numInstances) {
-    int i = (blockIdx.x * blockDim.x + threadIdx.x)/4;
-    MP_float A = operand1[i];
-    MP_float B = operand2[i];
-    result[i] = A + B;
-    
-}
-
-__global__ void xmp_sub(MP_float *operand1, MP_float *operand2, MP_float *result, unsigned int numInstances) {
-    int i = (blockIdx.x * blockDim.x + threadIdx.x)/4;
-    MP_float A = operand1[i];
-    MP_float B = operand2[i];
-    result[i] = A - B;
-    
-}
-
-__global__ void xmp_mul(MP_float *operand1, MP_float *operand2, MP_float *result, unsigned int numInstances) {
-    int i = (blockIdx.x * blockDim.x + threadIdx.x)/4;
-    MP_float A = operand1[i];
-    MP_float B = operand2[i];
-    result[i] = A * B;
-    
-}
 
 __global__ void computeCellIndex(Atom *atomList, unsigned int *indexList,
 		unsigned int numAtoms, float3 min, float3 max, int3 gridSize,
@@ -201,7 +279,7 @@ __global__ void fillPotentialEdges(unsigned int *beginList,
 }
 
 __global__ void markRealEdges(unsigned int *edgeLeftList,
-		unsigned int *edgeRightList, bool *edgeMarkList, Atom *atomList,
+		unsigned int *edgeRightList, bool *edgeMarkList, bool *edgePreciseCheckList, Atom *atomList,
 		int numAtoms, int numEdges, float alpha) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numEdges)
@@ -214,15 +292,48 @@ __global__ void markRealEdges(unsigned int *edgeLeftList,
 	float d = (a1.x * a1.x - a2.x * a2.x) + (a1.y * a1.y - a2.y * a2.y)
 			+ (a1.z * a1.z - a2.z * a2.z) - (a1.radius * a1.radius)
 			+ (a2.radius * a2.radius);
-	d /= 2;
-	float t = (d - a * a1.x - b * a1.y - c * a1.z);
+	//d /= 2;
+	float t = (d - a * a1.x * 2 - b * a1.y * 2 - c * a1.z * 2);
 	/*to avoid division, we multiply all terms by (a * a + b * b + c * c)
 	 * Intead of using the actual distance as shows below, we use the distance multiplied by the factor.
 	float currentDist = ((t * t) / (a * a + b * b + c * c)) 
 			- (a1.radius * a1.radius); */
 	float currentDistTerm = ((t * t)) 
-			- (a1.radius * a1.radius)*(a * a + b * b + c * c); 
-	if (currentDistTerm <= (alpha + ATHRES)*(a * a + b * b + c * c)) {
+			- (a1.radius * a1.radius)*(a * a + b * b + c * c)*4; 
+	if (currentDistTerm <= (alpha + ATHRES)*(a * a + b * b + c * c)*4) {
+		edgeMarkList[i] = true;
+	} else {
+		edgeMarkList[i] = false;
+	}
+	bool sign = (currentDistTerm - (alpha + ATHRES)*(a * a + b * b + c * c)) < 0;
+    edgePreciseCheckList[i] = (((currentDistTerm - (alpha + ATHRES)*(a * a + b * b + c * c)) < ERRCHECKRES && !sign) || (((alpha + ATHRES)*(a * a + b * b + c * c) - currentDistTerm) > ERRCHECKRES && sign));
+    
+}
+__global__ void markRealEdgesPrecise(unsigned int *edgeLeftList,
+		unsigned int *edgeRightList, bool *edgeMarkList, int *edgePreciseCheckIndexList, Atom *atomList, int numEdgesReqPrecise, float alpha) {
+	int j = (blockIdx.x * blockDim.x + threadIdx.x)/4;
+	if (j >= numEdgesReqPrecise)
+        return;
+    int i = edgePreciseCheckIndexList[j];
+	Atom a1 = atomList[edgeLeftList[i]];
+	Atom a2 = atomList[edgeRightList[i]];
+        float a = a1.x - a2.x;
+	    float b = a1.y - a2.y;
+	    float c = a1.z - a2.z;
+	    MP_float d = MP_float(a1.x) * MP_float(a1.x);
+	    d = d - MP_float(a2.x) * MP_float(a2.x);
+	    d = d + MP_float(a1.y) * MP_float(a1.y);
+	    d = d - MP_float(a2.y) * MP_float(a2.y);
+		d = d + MP_float(a1.z * a1.z - a2.z * a2.z);
+		d = d - MP_float(a1.radius * a1.radius);
+		d = d + MP_float(a2.radius * a2.radius);
+	    //d = 2;
+	    MP_float t = d - MP_float(a *a1.x * 2);
+	    t = t - MP_float(b*a1.y* 2);
+	    t = t - MP_float(c* a1.z * 2);
+	    MP_float currentDistTerm = t * t; 
+		currentDistTerm = currentDistTerm - MP_float(a1.radius * a1.radius)*MP_float(a * a + b * b + c * c)*MP_float(4);
+		if (currentDistTerm <= MP_float(alpha + ATHRES)*MP_float(a * a + b * b + c * c)*MP_float(4)) {
 		edgeMarkList[i] = true;
 	} else {
 		edgeMarkList[i] = false;
@@ -341,7 +452,7 @@ __global__ void markRealTriangles(unsigned int *triV1IndexList,
 	float a31 = (a2.y - a1.y) * (a3.z - a1.z) - (a3.y - a1.y) * (a2.z - a1.z);
 	float a32 = (a2.z - a1.z) * (a3.x - a1.x) - (a3.z - a1.z) * (a2.x - a1.x);
 	float a33 = (a2.x - a1.x) * (a3.y - a1.y) - (a3.x - a1.x) * (a2.y - a1.y);
-	float b3 = a31 * a1.x + a32 * a1.y + a33 * a1.z * 2; //extra factor of 2 to avoid division of b1 and b2
+	float b3 = (a31 * a1.x + a32 * a1.y + a33 * a1.z) * 2; //extra factor of 2 to avoid division of b1 and b2
 	// Use Cramer's rule to find intersection point of these three planes
 	float D = a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
 			- a13 * a22 * a31 - a12 * a21 * a33 - a11 * a23 * a32;
@@ -373,9 +484,8 @@ __global__ void markRealTriangles(unsigned int *triV1IndexList,
 
 
 __global__ void markRealTrianglesPrecise(unsigned int *triV1IndexList,
-		unsigned int *triV2IndexList, unsigned int *triV3IndexList,bool *triMarkList,unsigned int *triPreciseCheckIndexList, float4 *orthoSphereList, Atom *atomList,
-		int numAtoms, float alpha, int numReqPreciseCheck ) {
-	int j = (blockIdx.x * blockDim.x + threadIdx.x)/4;
+		unsigned int *triV2IndexList, unsigned int *triV3IndexList,bool *triMarkList,unsigned int *triPreciseCheckIndexList, Atom *atomList, float alpha, int numReqPreciseCheck ) {
+	int j = (blockIdx.x * blockDim.x + threadIdx.x);
 	if (j >= numReqPreciseCheck){
 	    //printf("return ,%d ",j);
 		return;
@@ -389,29 +499,42 @@ __global__ void markRealTrianglesPrecise(unsigned int *triV1IndexList,
 	Atom a2 = atomList[v2];
 	Atom a3 = atomList[v3];
 
-	// Find equation of plane of intersection of atoms a1 and a2
-	//delete A; delete B; delete sum;
-    //MP_float a1x(a1.x), a1y(a1.y), a1z(a1.z), a2x(a2.x), a2y(a2.y), a2z(a2.z), a3x(a3.x), a3y(a3.y), a3z(a3.z), a1rad(a1.radius), a2rad(a2.radius), a3rad(a3.radius);
-    MP_float a11 = MP_float(a1.x - a2.x);
-	MP_float a12 = MP_float(a1.y - a2.y);
-	MP_float a13 = MP_float(a1.z - a2.z);
-	MP_float b1 = MP_float(a1.x * a1.x - a2.x * a2.x) + MP_float(a1.y * a1.y - a2.y * a2.y) + MP_float(a1.z * a1.z - a2.z * a2.z)  - MP_float(a1.radius * a1.radius)
+	MP_float a11 = a1.x - a2.x;
+	MP_float a12 = a1.y - a2.y;
+	MP_float a13 = a1.z - a2.z;
+	MP_float b1 = MP_float(a1.x * a1.x - a2.x * a2.x) + MP_float(a1.y * a1.y - a2.y * a2.y)
+			+ MP_float(a1.z * a1.z - a2.z * a2.z) - MP_float(a1.radius * a1.radius)
 			+ MP_float(a2.radius * a2.radius);
-	MP_float a21 = MP_float(a2.x - a3.x);
-	MP_float a22 = MP_float(a2.y - a3.y);
-	MP_float a23 = MP_float(a2.z - a3.z);
-	MP_float b2 = MP_float(a2.x * a2.x - a3.x * a3.x) +MP_float (a2.y * a2.y - a3.y * a3.y)
+	
+	//b1 /= 2; avoid division for now
+	// Find equation of plane of intersection of atoms a2 and a3
+	MP_float a21 = a2.x - a3.x;
+	MP_float a22 = a2.y - a3.y;
+	MP_float a23 = a2.z - a3.z;
+	MP_float b2 = MP_float(a2.x * a2.x - a3.x * a3.x) + MP_float(a2.y * a2.y - a3.y * a3.y)
 			+ MP_float(a2.z * a2.z - a3.z * a3.z) - MP_float(a2.radius * a2.radius)
 			+ MP_float(a3.radius * a3.radius);
-	
-	MP_float a31 = MP_float((a2.y - a1.y) * (a3.z - a1.z));  
-	//MP_float a32 = MP_float((a3.y - a1.y) * (a2.z - a1.z));
-	//a31 = a31 - a32;
-	//delete a31temp;
-//	MP_float a32 = MP_float(a2.z - a1.z) * MP_float(a3.x - a1.x) - MP_float(a3.z - a1.z) * MP_float(a2.x - a1.x);
-//	MP_float a33 = MP_float(a2.x - a1.x) * MP_float(a3.y - a1.y) - MP_float(a3.x - a1.x) * MP_float(a2.y - a1.y);
-	
-	
+	//b2 /= 2; avoid division for now
+	// Find equation of plane containing centers of atoms a1, a2 and a3
+	MP_float a31 = MP_float(a2.y - a1.y) * MP_float(a3.z - a1.z) - MP_float(a3.y - a1.y) * MP_float(a2.z - a1.z);
+	MP_float a32 = MP_float(a2.z - a1.z) * MP_float(a3.x - a1.x) - MP_float(a3.z - a1.z) * MP_float(a2.x - a1.x);
+	MP_float a33 = MP_float(a2.x - a1.x) * MP_float(a3.y - a1.y) - MP_float(a3.x - a1.x) * MP_float(a2.y - a1.y);
+	MP_float b3 = (a31 * MP_float(a1.x) + a32 * MP_float(a1.y) + a33 * MP_float(a1.z)) * 2; //extra factor of 2 to avoid division of b1 and b2
+	// Use Cramer's rule to find intersection point of these three planes
+	MP_float D = a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
+			- a13 * a22 * a31 - a12 * a21 * a33 - a11 * a23 * a32;
+	MP_float Dx = b1 * a22 * a33 + a12 * a23 * b3 + a13 * b2 * a32 - a13 * a22 * b3
+			- a12 * b2 * a33 - b1 * a23 * a32;
+	MP_float Dy = a11 * b2 * a33 + b1 * a23 * a31 + a13 * a21 * b3 - a13 * b2 * a31
+			- b1 * a21 * a33 - a11 * a23 * b3;
+	MP_float Dz = a11 * a22 * b3 + a12 * b2 * a31 + b1 * a21 * a32 - b1 * a22 * a31
+			- a12 * a21 * b3 - a11 * b2 * a32;
+	/* avoid disivion by D for now, divide later while storing orthosphere */
+	D = D*2;
+
+	MP_float dist = (MP_float(a1.x)*D - Dx) * (MP_float(a1.x)*D - Dx) + (MP_float(a1.y)*D - Dy) * (MP_float(a1.y)*D - Dy)
+			+ (MP_float(a1.z)*D - Dz) * (MP_float(a1.z)*D - Dz) - MP_float(a1.radius * a1.radius)*D*D;
+    triMarkList[i] = (dist <= MP_float(alpha + ATHRES)*D*D);
 	
 } 
 
@@ -544,7 +667,7 @@ __global__ void fillPossibleTets(unsigned int *triV1IndexList,
 
 __global__ void markRealTets(unsigned int *tetV1IndexList,
 		unsigned int *tetV2IndexList, unsigned int *tetV3IndexList,
-		unsigned int *tetV4IndexList, bool *tetMarkList, Atom *atomList,
+		unsigned int *tetV4IndexList, bool *tetMarkList, bool *tetPreciseCheckList, Atom *atomList,
 		float4 *orthoSphereList, int numAtoms, int numTets, float alpha) {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= numTets)
@@ -564,7 +687,7 @@ __global__ void markRealTets(unsigned int *tetV1IndexList,
 	float b1 = (a1.x * a1.x - a2.x * a2.x) + (a1.y * a1.y - a2.y * a2.y)
 			+ (a1.z * a1.z - a2.z * a2.z) - (a1.radius * a1.radius)
 			+ (a2.radius * a2.radius);
-	b1 /= 2;
+	// b1 /= 2; avoid division
 	// Find equation of plane of intersection of atoms a2 and a3
 	float a21 = a2.x - a3.x;
 	float a22 = a2.y - a3.y;
@@ -572,7 +695,7 @@ __global__ void markRealTets(unsigned int *tetV1IndexList,
 	float b2 = (a2.x * a2.x - a3.x * a3.x) + (a2.y * a2.y - a3.y * a3.y)
 			+ (a2.z * a2.z - a3.z * a3.z) - (a2.radius * a2.radius)
 			+ (a3.radius * a3.radius);
-	b2 /= 2;
+	// b2 /= 2; avoid division
 	// Find equation of plane of intersection of atoms a3 and a4
 	float a31 = a3.x - a4.x;
 	float a32 = a3.y - a4.y;
@@ -580,7 +703,7 @@ __global__ void markRealTets(unsigned int *tetV1IndexList,
 	float b3 = (a3.x * a3.x - a4.x * a4.x) + (a3.y * a3.y - a4.y * a4.y)
 			+ (a3.z * a3.z - a4.z * a4.z) - (a3.radius * a3.radius)
 			+ (a4.radius * a4.radius);
-	b3 /= 2;
+	// b3 /= 2; avoid division
 	// Use Cramer's rule to find ortho-sphere center
 	float D = a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
 			- a13 * a22 * a31 - a12 * a21 * a33 - a11 * a23 * a32;
@@ -597,10 +720,77 @@ __global__ void markRealTets(unsigned int *tetV1IndexList,
 		float X = Dx / D;
 		float Y = Dy / D;
 		float Z = Dz / D;
-		float dist = (a2.x - X) * (a2.x - X) + (a2.y - Y) * (a2.y - Y)
-				+ (a2.z - Z) * (a2.z - Z) - a2.radius * a2.radius;
-		tetMarkList[i] = (dist <= (alpha + ATHRES));
-		orthoSphereList[i] = make_float4(X, Y, Z, dist);
+		D *= 2;
+		/* Use Dx, Dy, Dz instaed of X, Y, Z for comparision to avoid division errors. 
+		 * Multiply alpha by D*D to account for the extra factors of D*/
+		float dist = (a1.x*D - Dx) * (a1.x*D - Dx) + (a1.y*D - Dy) * (a1.y*D - Dy)
+			+ (a1.z*D - Dz) * (a1.z*D - Dz) - a1.radius * a1.radius*D*D;
+		tetMarkList[i] = (dist <= (alpha + ATHRES)*D*D);
+		
+		bool sign = (dist - (alpha + ATHRES)*D*D) < 0;
+        tetPreciseCheckList[i] = (((dist - (alpha + ATHRES)*D*D) < ERRCHECKRES && !sign) || (((alpha + ATHRES)*D*D - dist) > ERRCHECKRES && sign));
+        dist /= (D*D);
+        orthoSphereList[i] = make_float4(X, Y, Z, dist);
+	}
+}
+
+__global__ void markRealTetsPrecise(unsigned int *tetV1IndexList,
+		unsigned int *tetV2IndexList, unsigned int *tetV3IndexList,
+		unsigned int *tetV4IndexList, bool *tetMarkList, unsigned int *tetPreciseCheckIndexList, Atom *atomList, int numReqPreciseCheck, float alpha) {
+	int j = blockIdx.x * blockDim.x + threadIdx.x;
+	if (j >= numReqPreciseCheck)
+		return;
+	int i = tetPreciseCheckIndexList[j];
+	unsigned int v1 = tetV1IndexList[i];
+	unsigned int v2 = tetV2IndexList[i];
+	unsigned int v3 = tetV3IndexList[i];
+	unsigned int v4 = tetV4IndexList[i];
+	Atom a1 = atomList[v1];
+	Atom a2 = atomList[v2];
+	Atom a3 = atomList[v3];
+	Atom a4 = atomList[v4];
+	// Find equation of plane of intersection of atoms a1 and a2
+	MP_float a11 = MP_float(a1.x - a2.x);
+	MP_float a12 = MP_float(a1.y - a2.y);
+	MP_float a13 = MP_float(a1.z - a2.z);
+	MP_float b1 = MP_float(a1.x * a1.x - a2.x * a2.x) + MP_float(a1.y * a1.y - a2.y * a2.y)
+			+ MP_float(a1.z * a1.z - a2.z * a2.z) - MP_float(a1.radius * a1.radius)
+			+ MP_float(a2.radius * a2.radius);
+	// b1 /= 2; avoid division
+	// Find equation of plane of intersection of atoms a2 and a3
+	MP_float a21 = MP_float(a2.x - a3.x);
+	MP_float a22 = MP_float(a2.y - a3.y);
+	MP_float a23 = MP_float(a2.z - a3.z);
+	MP_float b2 = MP_float(a2.x * a2.x - a3.x * a3.x) + MP_float(a2.y * a2.y - a3.y * a3.y)
+			+ MP_float(a2.z * a2.z - a3.z * a3.z) - MP_float(a2.radius * a2.radius)
+			+ MP_float(a3.radius * a3.radius);
+	// b2 /= 2; avoid division
+	// Find equation of plane of intersection of atoms a3 and a4
+	MP_float a31 = MP_float(a3.x - a4.x);
+	MP_float a32 = MP_float(a3.y - a4.y);
+	MP_float a33 = MP_float(a3.z - a4.z);
+	MP_float b3 = MP_float(a3.x * a3.x - a4.x * a4.x) + MP_float(a3.y * a3.y - a4.y * a4.y)
+			+ MP_float(a3.z * a3.z - a4.z * a4.z) - MP_float(a3.radius * a3.radius)
+			+ MP_float(a4.radius * a4.radius);
+	// b3 /= 2; avoid division
+	// Use Cramer's rule to find ortho-sphere center
+	MP_float D = a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
+			- a13 * a22 * a31 - a12 * a21 * a33 - a11 * a23 * a32;
+	MP_float Dx = b1 * a22 * a33 + a12 * a23 * b3 + a13 * b2 * a32 - a13 * a22 * b3
+			- a12 * b2 * a33 - b1 * a23 * a32;
+	MP_float Dy = a11 * b2 * a33 + b1 * a23 * a31 + a13 * a21 * b3 - a13 * b2 * a31
+			- b1 * a21 * a33 - a11 * a23 * b3;
+	MP_float Dz = a11 * a22 * b3 + a12 * b2 * a31 + b1 * a21 * a32 - b1 * a22 * a31
+			- a12 * a21 * b3 - a11 * b2 * a32;
+	if (D.get_float() == 0.0) {
+		tetMarkList[i] = true;
+		//orthoSphereList[i] = make_float4(0, 0, 0, 0);
+	} else {
+	    D = D*MP_float(2);
+		/* Use Dx, Dy, Dz instaed of X, Y, Z for comparision to avoid division errors. */
+		MP_float dist = (MP_float(a1.x)*D - Dx) * (MP_float(a1.x)*D - Dx) + (MP_float(a1.y)*D - Dy) * (MP_float(a1.y)*D - Dy) + (MP_float(a1.z)*D - Dz) * (MP_float(a1.z)*D - Dz) - MP_float(a1.radius * a1.radius)*D*D;
+		tetMarkList[i] = (dist <= MP_float(alpha + ATHRES)*D*D);
+		
 	}
 }
 
@@ -653,6 +843,10 @@ __global__ void checkTetsOrthosphere(unsigned int *tetV1IndexList,
 			if (orientation < 0) {
 				float result = insphere_w(pa, pb, pc, pd, pe, wa, wb, wc, wd,
 						we);
+				if(Absolute(result) < ERRCHECKRES){
+				    result = insphere_w_precise(pa, pb, pc, pd, pe, wa, wb, wc, wd,
+						we);
+				}
 				if (result < 0) {
 					sphereMarkList[tetIndex] = false;
 					return;
@@ -1210,19 +1404,45 @@ int main(int argc, char **argv) {
 	thrust::device_vector<unsigned int> d_edgeLeftIndex(numEdges);
 	thrust::device_vector<unsigned int> d_edgeRightIndex(numEdges);
 	thrust::device_vector<bool> d_edgeMarkList(numEdges, false);
+	thrust::device_vector<bool> d_edgePreciseCheckList(numEdges, false);
 	unsigned int *d_edgeLeftIndex_ptr = thrust::raw_pointer_cast(
 			&d_edgeLeftIndex[0]);
 	unsigned int *d_edgeRightIndex_ptr = thrust::raw_pointer_cast(
 			&d_edgeRightIndex[0]);
 	bool *d_edgeMark_ptr = thrust::raw_pointer_cast(&d_edgeMarkList[0]);
+	bool *d_edgePreciseCheckList_ptr = thrust::raw_pointer_cast(&d_edgePreciseCheckList[0]);
 	fillPotentialEdges<<<blocks, threads>>>(d_indexBegin_ptr, d_indexEnd_ptr,
 			d_cellIndexList_ptr, numAtoms, d_possibleEdgeCount_ptr,
 			d_edgeLeftIndex_ptr, d_edgeRightIndex_ptr,
 			make_int3(gridExtentX, gridExtentY, gridExtentZ));
 	blocks = dim3(numEdges / THREADS + 1, 1, 1);
 	markRealEdges<<<blocks, threads >>>(d_edgeLeftIndex_ptr,
-			d_edgeRightIndex_ptr, d_edgeMark_ptr, d_atomList_ptr, numAtoms,
+			d_edgeRightIndex_ptr, d_edgeMark_ptr, d_edgePreciseCheckList_ptr, d_atomList_ptr, numAtoms,
 			numEdges, alpha);
+	gpuErrchk(cudaPeekAtLastError());
+	thrust::host_vector<bool> h_edgePreciseCheckList = d_edgePreciseCheckList;
+	
+	unsigned int numReqPreciseCheck = 0;
+	for(int i=0; i<numEdges; i++){
+	    if(h_edgePreciseCheckList[i]){
+	        numReqPreciseCheck ++;
+	    }
+	}
+	printf("hi, numPrecise:%d",numReqPreciseCheck);
+	thrust::host_vector<unsigned int> h_edgePreciseCheckIndexList(numReqPreciseCheck, 0u);
+	
+	int preciseCheckListLen = 0;
+	for(int i=0; i<numEdges; i++){
+	    if(h_edgePreciseCheckList[i]){
+	        h_edgePreciseCheckIndexList[preciseCheckListLen] = i;
+	    }
+	}
+	thrust::device_vector<int> d_edgePreciseCheckIndexList = h_edgePreciseCheckIndexList;
+	int *d_edgePreciseCheckIndexList_ptr = thrust::raw_pointer_cast(&d_edgePreciseCheckIndexList[0]);
+	blocks = dim3(numReqPreciseCheck/THREADS + 1 , 1, 1);
+	markRealEdgesPrecise<<<blocks, threads>>>(d_edgeLeftIndex_ptr,
+			d_edgeRightIndex_ptr, d_edgeMark_ptr, d_edgePreciseCheckIndexList_ptr, d_atomList_ptr,
+			numReqPreciseCheck, alpha); 
 	// Make zip_iterator easy to use
 	typedef thrust::device_vector<unsigned int>::iterator UIntDIter;
 	typedef thrust::device_vector<bool>::iterator BoolDIter;
@@ -1313,7 +1533,7 @@ int main(int argc, char **argv) {
 	gpuErrchk(cudaPeekAtLastError());
 	thrust::host_vector<bool> h_triPreciseCheckList = d_triPreciseCheckList;
 	
-	unsigned int numReqPreciseCheck = 0;
+	numReqPreciseCheck = 0;
 	for(int i=0; i<numTris; i++){
 	    if(h_triPreciseCheckList[i]){
 	        numReqPreciseCheck ++;
@@ -1322,7 +1542,7 @@ int main(int argc, char **argv) {
 	printf("hi, numPrecise:%d",numReqPreciseCheck);
 	thrust::host_vector<unsigned int> h_triPreciseCheckIndexList(numReqPreciseCheck, 0u);
 	
-	int preciseCheckListLen = 0;
+	preciseCheckListLen = 0;
 	for(int i=0; i<numTris; i++){
 	    if(h_triPreciseCheckList[i]){
 	        h_triPreciseCheckIndexList[preciseCheckListLen] = i;
@@ -1330,14 +1550,17 @@ int main(int argc, char **argv) {
 	}
 	thrust::device_vector<unsigned int> d_triPreciseCheckIndexList = h_triPreciseCheckIndexList;
 	unsigned int *d_triPreciseCheckIndexList_ptr = thrust::raw_pointer_cast(&d_triPreciseCheckIndexList[0]);
-	blocks = dim3(numReqPreciseCheck/ (int)128 + 1 , 1, 1);
+	blocks = dim3(10/THREADS + 1 , 1, 1);
 	//threads = dim3(512, 1, 1);
 	printf("***********calling:************%d\n",numReqPreciseCheck);
 	markRealTrianglesPrecise<<<blocks, threads>>>(d_triV1Index_ptr, d_triV2Index_ptr,
-			d_triV3Index_ptr, d_triMarkList_ptr, d_triPreciseCheckIndexList_ptr, d_p1List_ptr, d_atomList_ptr,
-			numAtoms, alpha, numReqPreciseCheck); 
+			d_triV3Index_ptr, d_triMarkList_ptr, d_triPreciseCheckIndexList_ptr, d_atomList_ptr, alpha, 10); 
 	gpuErrchk(cudaPeekAtLastError());
-    printf("here");
+    printf("here\n");
+    d_triPreciseCheckIndexList.clear();
+    h_triPreciseCheckIndexList.clear();
+    d_triPreciseCheckList.clear();
+    h_triPreciseCheckList.clear();
 	threads = dim3(THREADS, 1, 1);
 	// Make zip_iterator easy to use
 	typedef thrust::device_vector<float4>::iterator F4DIter;
@@ -1396,12 +1619,14 @@ int main(int argc, char **argv) {
 	thrust::device_vector<unsigned int> d_tetV3Index(numTets, 0u);
 	thrust::device_vector<unsigned int> d_tetV4Index(numTets, 0u);
 	thrust::device_vector<bool> d_tetMarkList(numTets, false);
+	thrust::device_vector<bool> d_tetPreciseCheckList(numTets, false);
 	thrust::device_vector<float4> d_orthoSphereList(numTets);
 	unsigned int *d_tetV1Index_ptr = thrust::raw_pointer_cast(&d_tetV1Index[0]);
 	unsigned int *d_tetV2Index_ptr = thrust::raw_pointer_cast(&d_tetV2Index[0]);
 	unsigned int *d_tetV3Index_ptr = thrust::raw_pointer_cast(&d_tetV3Index[0]);
 	unsigned int *d_tetV4Index_ptr = thrust::raw_pointer_cast(&d_tetV4Index[0]);
 	bool *d_tetMarkList_ptr = thrust::raw_pointer_cast(&d_tetMarkList[0]);
+	bool *d_tetPreciseCheckList_ptr = thrust::raw_pointer_cast(&d_tetPreciseCheckList[0]);
 	float4 *d_orthoSphereList_ptr = thrust::raw_pointer_cast(
 			&d_orthoSphereList[0]);
 
@@ -1411,11 +1636,41 @@ int main(int argc, char **argv) {
 			d_tetV4Index_ptr, d_possibleTetCount_ptr);
 	blocks = dim3(numTets / THREADS + 1, 1, 1);
 	markRealTets<<<blocks, threads >>>(d_tetV1Index_ptr, d_tetV2Index_ptr,
-			d_tetV3Index_ptr, d_tetV4Index_ptr, d_tetMarkList_ptr,
+			d_tetV3Index_ptr, d_tetV4Index_ptr, d_tetMarkList_ptr, d_tetPreciseCheckList_ptr,
 			d_atomList_ptr, d_orthoSphereList_ptr, numAtoms, numTets,
 			alpha);
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
+	thrust::host_vector<bool> h_tetPreciseCheckList = d_tetPreciseCheckList;
+	
+	numReqPreciseCheck = 0;
+	for(int i=0; i<numTris; i++){
+	    if(h_tetPreciseCheckList[i]){
+	        numReqPreciseCheck ++;
+	    }
+	}
+	printf("hi, numPrecise:%d",numReqPreciseCheck);
+	thrust::host_vector<unsigned int> h_tetPreciseCheckIndexList(numReqPreciseCheck, 0u);
+	
+	preciseCheckListLen = 0;
+	for(int i=0; i<numTets; i++){
+	    if(h_tetPreciseCheckList[i]){
+	        h_tetPreciseCheckIndexList[preciseCheckListLen] = i;
+	    }
+	}
+	thrust::device_vector<unsigned int> d_tetPreciseCheckIndexList = h_tetPreciseCheckIndexList;
+	unsigned int *d_tetPreciseCheckIndexList_ptr = thrust::raw_pointer_cast(&d_tetPreciseCheckIndexList[0]);
+	blocks = dim3(numReqPreciseCheck / THREADS + 1, 1, 1);
+	markRealTetsPrecise<<<blocks, threads >>>(d_tetV1Index_ptr, d_tetV2Index_ptr,
+			d_tetV3Index_ptr, d_tetV4Index_ptr, d_tetMarkList_ptr, d_tetPreciseCheckIndexList_ptr,
+			d_atomList_ptr, numReqPreciseCheck, alpha);
+	d_tetPreciseCheckIndexList.clear();
+    h_tetPreciseCheckIndexList.clear();
+    d_tetPreciseCheckList.clear();
+    h_tetPreciseCheckList.clear();
+	gpuErrchk(cudaPeekAtLastError());
+	gpuErrchk(cudaDeviceSynchronize());
+    printf("here");
 	// Make zip_iterator easy to use
 	typedef thrust::tuple<BoolDIter, UIntDIter, UIntDIter, UIntDIter, UIntDIter,
 			F4DIter> BoolInt4DIterTuple;
