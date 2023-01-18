@@ -1,3 +1,16 @@
+## ParallelAC with multiprecision
+
+This repository is a clone of the parallelAC code from VGL, IISC. It includes two multiprecision options:
+1. Integer multiprecision
+2. CGBN(XMP 2.0)
+
+Both of these options take a float variable and convert it into integer numerator and denominator.
+The integer precision option uses 32 bits for the numerator and denomintaor, whereas the CGBN option is a library provided by Nvidia, which uses a very long integer(256/512/1024 bits) for the numerator and only stores the exponent of the denominator.
+
+Extra kernels have been added, for performing precise computations when required, in the AlphaComplexParallel.cu file. Integer or Xmp precision can be chosen by commenting out the appropriate header files included at the top of the file. 
+
+GMP is currently required to build the XMP library, since the library uses GMP for tests and for host code. But since the XMP data types are used only on the device for parallelAC, the GMP dependency can be removed by editing the build files and include fles of XMP.
+
 ## Build
 
 Use the following set of commands to clone and build:
